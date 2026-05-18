@@ -1,0 +1,39 @@
+# ~/.bashrc — managed by chezmoi from devbox/chezmoi/dot_bashrc
+# Minimal: no fancy prompt, no aliases for human ergonomics. VPS is agent-driven.
+
+# Bail early for non-interactive shells (scp, rsync, ansible commands, etc.)
+case $- in
+    *i*) ;;
+    *) return;;
+esac
+
+# History
+HISTCONTROL=ignoreboth
+HISTSIZE=10000
+HISTFILESIZE=20000
+shopt -s histappend
+shopt -s checkwinsize
+
+# lesspipe (decoded non-text via `less`)
+[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
+
+# Color support
+if [ -x /usr/bin/dircolors ]; then
+    eval "$(dircolors -b)"
+    alias ls='ls --color=auto'
+    alias grep='grep --color=auto'
+fi
+
+# Prompt: user@host:cwd$
+PS1='\[\e[01;32m\]\u@\h\[\e[00m\]:\[\e[01;34m\]\w\[\e[00m\]\$ '
+
+# PATH: user-local binaries take priority
+export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
+
+# mise — per-project tool versions, tasks, env vars
+if [ -x "$HOME/.local/bin/mise" ]; then
+    eval "$($HOME/.local/bin/mise activate bash)"
+fi
+
+# Optional per-machine extras (e.g., one-off env that doesn't belong in chezmoi)
+[ -r "$HOME/.bashrc.local" ] && . "$HOME/.bashrc.local"

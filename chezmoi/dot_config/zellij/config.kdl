@@ -1,0 +1,11 @@
+// ~/.config/zellij/config.kdl — managed by chezmoi.
+// Global preferences. Per-project layouts live in each repo's zellij.kdl.
+
+// Click panes, drag splits, scroll with wheel.
+mouse_mode true
+
+// Disable the startup tip — agents see noise differently than humans.
+show_startup_tips false
+
+// Pane frames are visible by default (we like the borders for clarity).
+pane_frames true

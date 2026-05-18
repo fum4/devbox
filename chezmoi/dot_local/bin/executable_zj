@@ -1,0 +1,35 @@
+#!/bin/bash
+# zj — open or attach to a zellij workspace for a project.
+#
+#   zj            list all running zellij sessions
+#   zj <project>  attach if session "<project>" exists,
+#                 otherwise create it from ~/code/<project>/zellij.kdl
+
+set -u
+
+if [ -z "${1:-}" ]; then
+    zellij list-sessions 2>/dev/null
+    exit
+fi
+
+PROJECT="$1"
+DIR="$HOME/code/$PROJECT"
+
+if [ ! -d "$DIR" ]; then
+    echo "zj: directory $DIR does not exist" >&2
+    exit 1
+fi
+
+# Strip ANSI codes from `zellij list-sessions` before matching the name.
+if zellij list-sessions 2>/dev/null \
+   | sed "s/\x1b\[[0-9;]*m//g" \
+   | grep -qE "^${PROJECT}([[:space:]]|\$)"; then
+    exec zellij attach "$PROJECT"
+fi
+
+cd "$DIR" || exit 1
+if [ -f "zellij.kdl" ]; then
+    exec zellij -n zellij.kdl -s "$PROJECT"
+else
+    exec zellij -s "$PROJECT"
+fi
