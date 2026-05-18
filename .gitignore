@@ -1,0 +1,16 @@
+# Real inventory (contains IPs/hostnames; copy from inventory.ini.example)
+ansible/inventory.ini
+
+# Ansible artifacts
+*.retry
+ansible/.ansible_facts_cache
+ansible/.vault_pass
+
+# Secrets — only the encrypted (.age) versions get committed
+ansible/secrets/*
+!ansible/secrets/.gitkeep
+!ansible/secrets/*.age
+
+# Local OS noise
+.DS_Store
+Thumbs.db

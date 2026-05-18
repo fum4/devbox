@@ -1,0 +1,39 @@
+---
+- name: Add Tailscale apt key
+  ansible.builtin.get_url:
+    url: https://pkgs.tailscale.com/stable/debian/bookworm.noarmor.gpg
+    dest: /usr/share/keyrings/tailscale-archive-keyring.gpg
+    mode: "0644"
+
+- name: Add Tailscale apt repo
+  apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://pkgs.tailscale.com/stable/debian bookworm main"
+    state: present
+    filename: tailscale
+
+- name: Install Tailscale
+  apt:
+    name: tailscale
+    state: present
+    update_cache: true
+
+- name: Allow tailscale0 interface in ufw
+  ufw:
+    rule: allow
+    interface: tailscale0
+    direction: in
+    comment: "Tailscale"
+
+- name: Bring Tailscale up with auth key (and enable Tailscale SSH)
+  command: "tailscale up --ssh --authkey={{ tailscale_auth_key }}"
+  args:
+    creates: /var/lib/tailscale/tailscaled.state
+  when: tailscale_auth_key | length > 0
+
+- name: Notice — no auth key provided, Tailscale not yet authenticated
+  debug:
+    msg: |
+      Tailscale installed but not authenticated.
+      Run on the VPS: sudo tailscale up --ssh
+      Or re-run this playbook with TAILSCALE_AUTHKEY=tskey-... set.
+  when: tailscale_auth_key | length == 0

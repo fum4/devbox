@@ -1,0 +1,44 @@
+---
+- name: Provision devbox
+  hosts: devbox
+  become: true
+  gather_facts: true
+  pre_tasks:
+    - name: Ensure apt cache is fresh
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+      changed_when: false
+  roles:
+    - role: base                # apt updates, packages, fum4 user, sudoers, ssh key
+      tags: [base, bootstrap]
+
+    - role: hardening           # disable root SSH + password auth, ufw
+      tags: [hardening, bootstrap]
+
+    - role: tailscale           # install + bring up (needs $TAILSCALE_AUTHKEY)
+      tags: [tailscale, bootstrap]
+
+    - role: runtimes            # mise (it pulls Node/Bun/pnpm per-project)
+      tags: [runtimes, tools]
+
+    - role: agent-tools         # ripgrep, fd, jq, gh
+      tags: [agent-tools, tools]
+
+    - role: claude              # Claude Code CLI
+      tags: [claude, tools]
+
+    - role: zellij              # Zellij binary
+      tags: [zellij, tools]
+
+    - role: claude-squad        # Claude Squad TUI
+      tags: [claude-squad, tools]
+
+    - role: process-compose     # process-compose binary (for headless services)
+      tags: [process-compose, tools]
+
+    - role: ntfy                # ntfy CLI (dormant; no integrations yet)
+      tags: [ntfy, tools]
+
+    - role: dotfiles            # chezmoi + apply ../chezmoi
+      tags: [dotfiles]

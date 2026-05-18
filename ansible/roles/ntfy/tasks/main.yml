@@ -1,0 +1,8 @@
+---
+# ntfy CLI — for sending phone push notifications from scripts/agents/cron.
+# Installed dormant; no topics or systemd subscriptions wired up yet.
+
+- name: Install ntfy CLI
+  apt:
+    deb: https://github.com/binwiederhier/ntfy/releases/latest/download/ntfy_amd64.deb
+    state: present

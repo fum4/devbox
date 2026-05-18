@@ -1,0 +1,13 @@
+# Copy to inventory.ini and edit for your VPS.
+# inventory.ini is gitignored because it contains real hostnames/IPs.
+
+[devbox]
+# Replace <PUBLIC_IP> with your VPS's public IPv4
+vps ansible_host=<PUBLIC_IP>
+
+[devbox:vars]
+# First-time bootstrap: connect as root (Hetzner default).
+# After the `base` role creates fum4, change this to: ansible_user=fum4
+ansible_user=root
+ansible_ssh_private_key_file=~/.ssh/id_ed25519_vps_hetzner
+ansible_ssh_common_args='-o StrictHostKeyChecking=accept-new'

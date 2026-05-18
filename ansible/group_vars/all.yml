@@ -1,0 +1,11 @@
+---
+# The non-root user that owns the dev environment.
+devbox_user: fum4
+
+# Tailscale: set via env var to avoid committing the auth key.
+# Get a one-shot pre-authorized key from https://login.tailscale.com/admin/settings/keys
+# Then: TAILSCALE_AUTHKEY=tskey-... ansible-playbook -i inventory.ini site.yml
+tailscale_auth_key: "{{ lookup('env', 'TAILSCALE_AUTHKEY') | default('', true) }}"
+
+# Node version to lock in via mise (per-project .mise.toml can override)
+node_version: "24"

@@ -1,0 +1,10 @@
+---
+- name: Install Zellij (musl static binary)
+  ansible.builtin.unarchive:
+    src: https://github.com/zellij-org/zellij/releases/latest/download/zellij-x86_64-unknown-linux-musl.tar.gz
+    dest: /usr/local/bin/
+    remote_src: true
+    creates: /usr/local/bin/zellij
+    mode: "0755"
+    owner: root
+    group: root

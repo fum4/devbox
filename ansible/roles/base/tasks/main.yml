@@ -1,0 +1,59 @@
+---
+- name: Upgrade all packages
+  apt:
+    upgrade: dist
+    autoremove: true
+
+- name: Install base packages
+  apt:
+    name:
+      - curl
+      - ca-certificates
+      - gnupg
+      - sudo
+      - ufw
+      - git
+      - build-essential
+      - htop
+      - unzip
+      - tmux
+    state: present
+
+- name: Create user {{ devbox_user }}
+  user:
+    name: "{{ devbox_user }}"
+    shell: /bin/bash
+    state: present
+    create_home: true
+    password: "!"   # disabled password (key-only)
+
+- name: Add {{ devbox_user }} to sudo group
+  user:
+    name: "{{ devbox_user }}"
+    groups: sudo
+    append: true
+
+- name: Passwordless sudo for {{ devbox_user }}
+  copy:
+    dest: "/etc/sudoers.d/{{ devbox_user }}"
+    content: "{{ devbox_user }} ALL=(ALL) NOPASSWD:ALL\n"
+    mode: "0440"
+    validate: "visudo -cf %s"
+
+- name: Ensure .ssh dir
+  file:
+    path: "/home/{{ devbox_user }}/.ssh"
+    state: directory
+    owner: "{{ devbox_user }}"
+    group: "{{ devbox_user }}"
+    mode: "0700"
+
+- name: Copy root authorized_keys to {{ devbox_user }}
+  copy:
+    src: /root/.ssh/authorized_keys
+    dest: "/home/{{ devbox_user }}/.ssh/authorized_keys"
+    remote_src: true
+    owner: "{{ devbox_user }}"
+    group: "{{ devbox_user }}"
+    mode: "0600"
+  when: ansible_user == "root"

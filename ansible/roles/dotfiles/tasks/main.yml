@@ -1,0 +1,14 @@
+---
+- name: Install chezmoi
+  shell: |
+    set -e
+    sh -c "$(curl -fsLS get.chezmoi.io)" -- -b /usr/local/bin
+  args:
+    creates: /usr/local/bin/chezmoi
+
+- name: Initialize and apply chezmoi from this repo's chezmoi/ dir
+  command:
+    cmd: "chezmoi init --apply --source={{ playbook_dir }}/../chezmoi"
+  args:
+    creates: "/home/{{ devbox_user }}/.config/chezmoi/chezmoi.toml"
+  become_user: "{{ devbox_user }}"

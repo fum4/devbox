@@ -1,0 +1,11 @@
+---
+# Claude Squad — TUI to orchestrate multiple Claude/Codex/Aider sessions
+# on isolated git worktrees. Installed via official install script.
+
+- name: Install Claude Squad
+  shell: |
+    set -e
+    curl -fsSL https://raw.githubusercontent.com/smtg-ai/claude-squad/main/install.sh | bash
+  args:
+    creates: /usr/local/bin/cs
+  become_user: "{{ devbox_user }}"

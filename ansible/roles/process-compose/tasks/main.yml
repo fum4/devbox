@@ -1,0 +1,15 @@
+---
+# process-compose — Docker-Compose-like declarative process orchestration.
+# Used for headless backing services (Postgres, Redis, workers) where TUI
+# attachment isn't needed. Do NOT use for Claude/Metro etc — those need a real PTY.
+
+- name: Install process-compose
+  ansible.builtin.unarchive:
+    src: https://github.com/F1bonacc1/process-compose/releases/latest/download/process-compose_linux_amd64.tar.gz
+    dest: /usr/local/bin/
+    remote_src: true
+    creates: /usr/local/bin/process-compose
+    mode: "0755"
+    owner: root
+    group: root
+    extra_opts: ["--no-anchored", "process-compose"]

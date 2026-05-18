@@ -1,0 +1,27 @@
+---
+- name: Add Claude Code apt key
+  ansible.builtin.get_url:
+    url: https://downloads.claude.ai/keys/claude-code.asc
+    dest: /etc/apt/keyrings/claude-code.asc
+    mode: "0644"
+
+- name: Ensure /etc/apt/keyrings exists
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Add Claude Code apt repo
+  apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/claude-code.asc] https://downloads.claude.ai/claude-code/apt/stable stable main"
+    state: present
+    filename: claude-code
+
+- name: Install Claude Code
+  apt:
+    name: claude-code
+    state: present
+    update_cache: true
+
+# Note: `claude` requires a one-time `/login` (OAuth flow in browser).
+# Run as the dev user after the playbook: `claude` then `/login`.

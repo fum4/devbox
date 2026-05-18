@@ -1,0 +1,45 @@
+---
+- name: Disable root SSH login
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^#?PermitRootLogin"
+    line: "PermitRootLogin no"
+    validate: "sshd -t -f %s"
+  notify: restart ssh
+
+- name: Disable SSH password authentication
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^#?PasswordAuthentication"
+    line: "PasswordAuthentication no"
+    validate: "sshd -t -f %s"
+  notify: restart ssh
+
+- name: Disable challenge-response auth
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^#?ChallengeResponseAuthentication"
+    line: "ChallengeResponseAuthentication no"
+    validate: "sshd -t -f %s"
+  notify: restart ssh
+
+- name: Allow SSH on ufw
+  ufw:
+    rule: allow
+    port: "22"
+    proto: tcp
+    comment: "SSH"
+
+- name: Set default ufw incoming policy to deny
+  ufw:
+    direction: incoming
+    policy: deny
+
+- name: Set default ufw outgoing policy to allow
+  ufw:
+    direction: outgoing
+    policy: allow
+
+- name: Enable ufw
+  ufw:
+    state: enabled
