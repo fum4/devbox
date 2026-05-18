@@ -1,27 +1,17 @@
 ---
-- name: Add Claude Code apt key
-  ansible.builtin.get_url:
-    url: https://downloads.claude.ai/keys/claude-code.asc
-    dest: /etc/apt/keyrings/claude-code.asc
-    mode: "0644"
+# Claude Code CLI — installed via the official installer script (user-scoped).
+# Lands at ~/.local/bin/claude; the binary is a symlink into
+# ~/.local/share/claude/versions/<v>/.
+#
+# Note: `claude` requires a one-time `/login` (browser OAuth flow) after
+# install — not automatable. SSH in as `fum4` and run:
+#     claude
+#     /login
 
-- name: Ensure /etc/apt/keyrings exists
-  file:
-    path: /etc/apt/keyrings
-    state: directory
-    mode: "0755"
-
-- name: Add Claude Code apt repo
-  apt_repository:
-    repo: "deb [signed-by=/etc/apt/keyrings/claude-code.asc] https://downloads.claude.ai/claude-code/apt/stable stable main"
-    state: present
-    filename: claude-code
-
-- name: Install Claude Code
-  apt:
-    name: claude-code
-    state: present
-    update_cache: true
-
-# Note: `claude` requires a one-time `/login` (OAuth flow in browser).
-# Run as the dev user after the playbook: `claude` then `/login`.
+- name: Install Claude Code via official installer
+  shell: |
+    set -e
+    curl -fsSL https://claude.ai/install.sh | bash
+  args:
+    creates: "/home/{{ devbox_user }}/.local/bin/claude"
+  become_user: "{{ devbox_user }}"

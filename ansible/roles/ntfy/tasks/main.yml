@@ -1,8 +1,23 @@
 ---
-# ntfy CLI — for sending phone push notifications from scripts/agents/cron.
-# Installed dormant; no topics or systemd subscriptions wired up yet.
+# ntfy CLI — installed via the official apt repo at archive.heckel.io.
+# Installed dormant; no topics, subscriptions, or systemd services wired up.
+# To use: pick a random topic, `curl -d "msg" ntfy.sh/<topic>`, subscribe on phone.
 
-- name: Install ntfy CLI
-  apt:
-    deb: https://github.com/binwiederhier/ntfy/releases/latest/download/ntfy_amd64.deb
+- name: Add ntfy apt key (dearmored)
+  shell: |
+    set -e
+    curl -fsSL https://archive.heckel.io/apt/pubkey.txt | gpg --dearmor -o /usr/share/keyrings/archive.heckel.io.gpg
+  args:
+    creates: /usr/share/keyrings/archive.heckel.io.gpg
+
+- name: Add ntfy apt repo
+  apt_repository:
+    repo: "deb [arch=amd64,arm64 signed-by=/usr/share/keyrings/archive.heckel.io.gpg] https://archive.heckel.io/apt debian main"
     state: present
+    filename: ntfy
+
+- name: Install ntfy
+  apt:
+    name: ntfy
+    state: present
+    update_cache: true
