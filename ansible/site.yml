@@ -40,5 +40,8 @@
     - role: ntfy                # ntfy CLI (dormant; no integrations yet)
       tags: [ntfy, tools]
 
+    - role: agents              # AGENTS.md + cross-agent skills + wt prune cron
+      tags: [agents, dotfiles]
+
     - role: dotfiles            # chezmoi + apply ../chezmoi
       tags: [dotfiles]

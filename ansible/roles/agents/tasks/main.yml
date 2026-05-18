@@ -1,0 +1,71 @@
+---
+# Deploy AGENTS.md + cross-agent skills (see ../../../agents/README.md).
+#
+# Strategy:
+#   1. rsync devbox/agents/ → ~/.agents/ on the VPS (canonical location)
+#   2. symlink ~/.claude/CLAUDE.md and ~/.codex/AGENTS.md → ~/.agents/AGENTS.md
+#   3. symlink ~/.claude/skills and ~/.codex/skills → ~/.agents/skills
+#   4. install the 30-min `wt prune` cron entry for worktree cleanup
+
+- name: Ensure agent home dirs exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ devbox_user }}"
+    group: "{{ devbox_user }}"
+    mode: "0755"
+  loop:
+    - "/home/{{ devbox_user }}/.claude"
+    - "/home/{{ devbox_user }}/.codex"
+    - "/home/{{ devbox_user }}/.agents"
+
+- name: Sync agents/ source → ~/.agents/
+  copy:
+    src: "{{ playbook_dir }}/../agents/"
+    dest: "/home/{{ devbox_user }}/.agents/"
+    owner: "{{ devbox_user }}"
+    group: "{{ devbox_user }}"
+    mode: preserve
+
+- name: Symlink ~/.claude/CLAUDE.md → ~/.agents/AGENTS.md
+  file:
+    src: "/home/{{ devbox_user }}/.agents/AGENTS.md"
+    dest: "/home/{{ devbox_user }}/.claude/CLAUDE.md"
+    state: link
+    force: true
+    owner: "{{ devbox_user }}"
+    group: "{{ devbox_user }}"
+
+- name: Symlink ~/.codex/AGENTS.md → ~/.agents/AGENTS.md
+  file:
+    src: "/home/{{ devbox_user }}/.agents/AGENTS.md"
+    dest: "/home/{{ devbox_user }}/.codex/AGENTS.md"
+    state: link
+    force: true
+    owner: "{{ devbox_user }}"
+    group: "{{ devbox_user }}"
+
+- name: Symlink ~/.claude/skills → ~/.agents/skills
+  file:
+    src: "/home/{{ devbox_user }}/.agents/skills"
+    dest: "/home/{{ devbox_user }}/.claude/skills"
+    state: link
+    force: true
+    owner: "{{ devbox_user }}"
+    group: "{{ devbox_user }}"
+
+- name: Symlink ~/.codex/skills → ~/.agents/skills
+  file:
+    src: "/home/{{ devbox_user }}/.agents/skills"
+    dest: "/home/{{ devbox_user }}/.codex/skills"
+    state: link
+    force: true
+    owner: "{{ devbox_user }}"
+    group: "{{ devbox_user }}"
+
+- name: Schedule `wt prune` cron (sweep merged-PR worktrees every 30 min)
+  cron:
+    name: "wt prune"
+    user: "{{ devbox_user }}"
+    minute: "*/30"
+    job: "/home/{{ devbox_user }}/.local/bin/wt prune >> /tmp/wt-prune.log 2>&1"
