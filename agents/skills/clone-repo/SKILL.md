@@ -130,7 +130,39 @@ For each file it does write, the script emits TODO placeholders for the actual c
 
 ## 6. Wire in the real commands (only when `.mise.toml` was written)
 
-Edit `.mise.toml`. Replace each `run = "# TODO: …"` with the real command from your inspection in step 3. Example:
+Edit `.mise.toml`. Replace each `run = "# TODO: …"` with the real command from your inspection in step 3.
+
+### 6a. Fill in `[tasks.setup]` (the install convention)
+
+Every scaffolded `.mise.toml` includes a `[tasks.setup]` block. This task is run **once per fresh provision** by the `repos` Ansible role (and once when `clone-repo` finishes), and it should be the *first-time install command* for the project. Detect the right command by looking at the repo:
+
+| Files present | `setup` command |
+|---|---|
+| `package.json` + `pnpm-lock.yaml` | `pnpm install` |
+| `package.json` + `bun.lockb` | `bun install` |
+| `package.json` + `package-lock.json` | `npm ci` |
+| `package.json` + `yarn.lock` | `yarn install --frozen-lockfile` |
+| `Cargo.toml` | `cargo fetch` |
+| `pyproject.toml` + `uv.lock` | `uv sync` |
+| `pyproject.toml` + `poetry.lock` | `poetry install` |
+| `pyproject.toml` (other) | `pip install -e .` |
+| `Gemfile` | `bundle install` |
+| `go.mod` | `go mod download` |
+| `Cargo.toml` + extra system deps | `cargo fetch && (whatever the README says)` |
+
+If the project chains multiple steps for first-time setup (codegen, schema generation, fixture loading), include them. Example:
+
+```toml
+[tasks.setup]
+description = "First-time setup after clone"
+run = "pnpm install && pnpm run codegen"
+```
+
+Skip this if the repo is a non-installable read-only / library reference (no package manager or build step).
+
+### 6b. Fill in the per-tab dev tasks
+
+Replace each `[tasks."<name>"]` placeholder with the project's actual dev command. Example:
 
 ```toml
 [tasks."api:dev"]
@@ -140,13 +172,13 @@ run = "pnpm dev:api"
 
 If a task needs env vars or a working directory other than the repo root, configure them per [mise task docs](https://mise.jdx.dev/tasks/).
 
-In case A (both files present) and case C (mise was already there), skip this step — the tasks are already wired.
+In case A (both files present) and case C (mise was already there), skip 6a/6b — the tasks are already wired. But it's worth checking that `setup` exists; if not, add one based on the table above.
 
 ## 7. Bring up the workspace
 
 ```bash
 mise install                # install the project's locked tool versions
-<package install command>   # pnpm install / cargo fetch / pip install -e . / etc.
+mise run setup              # the install convention — runs whatever you wired in 6a
 zj <repo>                   # launch Zellij with the layout
 ```
 

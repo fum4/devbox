@@ -72,3 +72,61 @@
     - item.failed | default(false)
   loop_control:
     label: "{{ item.item }}"
+
+# --- per-repo first-run install -------------------------------------------
+# After each clone, run:
+#   1. `mise trust .` so mise will load the repo's .mise.toml
+#   2. `mise install` to fetch the repo's locked tool versions
+#   3. `mise run setup` so the repo's own install task runs (convention)
+#
+# Each step uses `failed_when: false` because:
+#   - some cloned repos may have no .mise.toml at all
+#   - even when they do, `setup` is an opt-in convention; not every repo will
+#     define it. Mise returns non-zero for missing tasks; we tolerate that.
+
+- name: Compute repo dir names (basename minus .git)
+  set_fact:
+    repo_dirs: "{{ repos_list | default([]) | map('basename') | map('regex_replace', '\\.git$', '') | list }}"
+  when: gh_auth_check.rc == 0
+
+- name: Trust each repo's .mise.toml
+  command: mise trust .
+  args:
+    chdir: "/home/{{ devbox_user }}/code/{{ item }}"
+  loop: "{{ repo_dirs | default([]) }}"
+  become_user: "{{ devbox_user }}"
+  changed_when: false
+  failed_when: false
+  when: gh_auth_check.rc == 0
+
+- name: Install each repo's locked tool versions (mise install)
+  command: mise install
+  args:
+    chdir: "/home/{{ devbox_user }}/code/{{ item }}"
+  loop: "{{ repo_dirs | default([]) }}"
+  become_user: "{{ devbox_user }}"
+  register: mise_install_result
+  failed_when: false
+  when: gh_auth_check.rc == 0
+
+- name: Run each repo's `setup` task if defined
+  command: mise run setup
+  args:
+    chdir: "/home/{{ devbox_user }}/code/{{ item }}"
+  loop: "{{ repo_dirs | default([]) }}"
+  become_user: "{{ devbox_user }}"
+  register: setup_result
+  failed_when: false
+  when: gh_auth_check.rc == 0
+
+- name: Report repos whose `setup` task failed (excluding 'task not defined')
+  debug:
+    msg: "{{ item.item }}: mise run setup → rc={{ item.rc }}, stderr: {{ (item.stderr | default('')) | truncate(200) }}"
+  loop: "{{ setup_result.results | default([]) }}"
+  when:
+    - gh_auth_check.rc == 0
+    - item.rc | default(0) != 0
+    - "'no tasks' not in (item.stderr | default('')) | lower"
+    - "'task ' not in (item.stderr | default('')) | lower or 'not found' not in (item.stderr | default('')) | lower"
+  loop_control:
+    label: "{{ item.item }}"
