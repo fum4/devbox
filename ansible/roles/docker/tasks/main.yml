@@ -1,0 +1,47 @@
+---
+# Docker Engine + Compose plugin. Needed for projects that orchestrate
+# their backing services (Postgres / Redis / object stores) via
+# Docker Compose locally on this box.
+
+- name: Ensure /etc/apt/keyrings exists
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Add Docker apt key
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/debian/gpg
+    dest: /etc/apt/keyrings/docker.asc
+    mode: "0644"
+
+- name: Add Docker apt repo (Debian 12 / bookworm)
+  apt_repository:
+    repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian bookworm stable"
+    state: present
+    filename: docker
+
+- name: Install Docker engine + Compose plugin
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+    update_cache: true
+
+- name: Ensure docker service is enabled + running
+  systemd:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Add {{ devbox_user }} to the docker group (no-sudo docker commands)
+  user:
+    name: "{{ devbox_user }}"
+    groups: docker
+    append: true
+  # NOTE: group membership only takes effect on new logins. Existing
+  # shells need `newgrp docker` or a fresh ssh/zellij session.

@@ -37,6 +37,9 @@
     - role: process-compose     # process-compose binary (for headless services)
       tags: [process-compose, tools]
 
+    - role: docker              # Docker engine + Compose plugin (for local infra stacks)
+      tags: [docker, tools]
+
     - role: ntfy                # ntfy CLI (dormant; no integrations yet)
       tags: [ntfy, tools]
 
