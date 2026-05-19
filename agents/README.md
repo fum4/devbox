@@ -1,6 +1,6 @@
 # agents/
 
-Everything agent-related: the always-loaded `AGENTS.md` and on-demand `skills/`. Both Claude Code and Codex CLI read from the same files via symlinks the playbook creates on the VPS.
+Everything agent-related: the always-loaded `AGENTS.md`, on-demand `skills/`, and per-agent runtime config (currently `claude/`). All of it is **symlinked** into the user's home on the VPS so edits in this directory are live the moment you save.
 
 ## Layout
 
@@ -8,7 +8,9 @@ Everything agent-related: the always-loaded `AGENTS.md` and on-demand `skills/`.
 agents/
 ├── README.md           ← this file
 ├── AGENTS.md           ← user-level instructions, loaded into every session
-└── skills/
+├── claude/             ← Claude Code runtime config
+│   └── settings.json     theme, permissions defaults, push-notif prefs, etc.
+└── skills/             ← on-demand capabilities (Agent Skills standard)
     └── <skill-name>/
         ├── SKILL.md
         └── (optional: scripts/ references/ assets/)
@@ -16,7 +18,7 @@ agents/
 
 ## How it materializes on the VPS
 
-The `agents` Ansible role creates `~/.agents/` as the cross-agent home (per the Agent Skills open standard), with each entry symlinked into this directory; both Claude Code's and Codex's expected paths then symlink at `~/.agents/`:
+The `agents` Ansible role creates `~/.agents/` as the cross-agent home (per the Agent Skills open standard), with each entry symlinked into this directory; both Claude Code's and Codex's expected paths then symlink at `~/.agents/`. A separate chezmoi `symlink_` stub (`chezmoi/dot_claude/symlink_settings.json`) points `~/.claude/settings.json` straight at `agents/claude/settings.json`:
 
 ```
 ~/code/devbox/agents/                  ← canonical source (this directory, checked out on the VPS)
@@ -28,13 +30,14 @@ The `agents` Ansible role creates `~/.agents/` as the cross-agent home (per the 
 ├── README.md  →  ~/code/devbox/agents/README.md
 └── skills     →  ~/code/devbox/agents/skills
 
-~/.claude/CLAUDE.md  → ~/.agents/AGENTS.md
-~/.claude/skills     → ~/.agents/skills
-~/.codex/AGENTS.md   → ~/.agents/AGENTS.md
-~/.codex/skills      → ~/.agents/skills
+~/.claude/CLAUDE.md          → ~/.agents/AGENTS.md
+~/.claude/skills             → ~/.agents/skills
+~/.claude/settings.json      → ~/code/devbox/agents/claude/settings.json   (via chezmoi)
+~/.codex/AGENTS.md           → ~/.agents/AGENTS.md
+~/.codex/skills              → ~/.agents/skills
 ```
 
-**One source of truth, live edits.** Editing a file under `~/code/devbox/agents/` *is* editing the deployed file — no copy step, no `chezmoi apply`, no ansible re-run. Both agents see the change on their next session.
+**One source of truth, live edits.** Editing a file under `~/code/devbox/agents/` *is* editing the deployed file — no copy step, no `chezmoi apply`, no ansible re-run for content changes. Both agents see the change on their next session. `chezmoi apply` or the ansible role only need to run once, when *introducing* a new symlinked path under here.
 
 ## AGENTS.md vs skills — when to use which
 
@@ -92,6 +95,16 @@ The `description` is the most important field — both agents use it to decide w
 3. Open a fresh session on either agent — new content is loaded
 
 No re-deploy step: `~/.claude/CLAUDE.md` and `~/.codex/AGENTS.md` resolve through `~/.agents/AGENTS.md` straight to this file.
+
+## Editing Claude Code config
+
+`agents/claude/settings.json` is the source for `~/.claude/settings.json` (theme, permissions defaults, push-notif prefs, etc. — see the [settings.json schema](https://docs.claude.com/en/docs/claude-code/settings)).
+
+1. Edit `agents/claude/settings.json`
+2. Commit + push
+3. Open a fresh Claude Code session — new settings are loaded
+
+No `chezmoi apply` needed for content changes — `~/.claude/settings.json` is a symlink into this file. Only re-run `chezmoi apply` if you're adding a *new* file under `agents/claude/` (so chezmoi can create the corresponding symlink at `~/.claude/<name>`).
 
 ## Sources
 

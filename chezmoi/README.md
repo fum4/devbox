@@ -15,6 +15,7 @@ This directory is **chezmoi's source state** — a structured set of files that 
 | `dot_X` | `.X` | The `dot_` prefix is replaced with a literal `.` |
 | `executable_X` | `X` with `0755` | Adds the executable permission |
 | `private_X` | `X` with `0600` (file) or `0700` (dir) | Owner-only permissions |
+| `symlink_X` | `X` as a symlink to the file's contents | Source file body = literal target path |
 | `encrypted_X` | `X` after decryption | Decrypted from age/gpg at apply time |
 | `X.tmpl` | `X` after Go-template render | Per-machine variables substituted |
 | `run_once_X.sh` | (runs once, never stored) | One-shot setup script |
@@ -25,15 +26,17 @@ Prefixes nest naturally: `private_dot_ssh/config` → `~/.ssh/config` with `0600
 
 ```
 chezmoi/
-├── dot_bashrc                       → ~/.bashrc
+├── dot_bashrc                              → ~/.bashrc
+├── dot_claude/
+│   └── symlink_settings.json               → ~/.claude/settings.json   (symlink into agents/claude/)
 ├── dot_config/
 │   └── zellij/
-│       └── config.kdl               → ~/.config/zellij/config.kdl
+│       └── config.kdl                      → ~/.config/zellij/config.kdl
 └── dot_local/
     └── bin/
-        ├── executable_zj                  → ~/.local/bin/zj                  (chmod +x)
-        ├── executable_wt                  → ~/.local/bin/wt                  (chmod +x)
-        └── executable_devbox-scaffold     → ~/.local/bin/devbox-scaffold     (chmod +x)
+        ├── executable_zj                   → ~/.local/bin/zj                  (chmod +x)
+        ├── executable_wt                   → ~/.local/bin/wt                  (chmod +x)
+        └── executable_devbox-scaffold      → ~/.local/bin/devbox-scaffold     (chmod +x)
 ```
 
 ### `dot_bashrc`
@@ -47,6 +50,12 @@ Minimal interactive shell setup. **No human-ergonomics layer** (no fancy prompt,
 - PATH ordering: `~/.local/bin` and `~/bin` first
 - mise activation (per-project tool versions, tasks, env vars)
 - Sources `~/.bashrc.local` if present (escape hatch for machine-specific extras)
+
+### `dot_claude/symlink_settings.json`
+
+Materializes `~/.claude/settings.json` as a **symlink** into `~/code/devbox/agents/claude/settings.json` (not a copy). The file's body is the literal target path — that's how chezmoi's `symlink_` prefix works.
+
+Why a symlink and not a copy: the Claude config is *agent-layer* state, so its canonical home is `agents/claude/` (see `agents/README.md`). chezmoi's job here is just to put a symlink at the right `~/.X` path. Editing `agents/claude/settings.json` is live immediately — no `chezmoi apply` needed for content changes; only re-run apply when adding a *new* file under `dot_claude/`.
 
 ### `dot_config/zellij/config.kdl`
 

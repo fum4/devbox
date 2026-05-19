@@ -22,11 +22,13 @@ devbox/
 │   ├── site.yml         top-level playbook (13 roles)
 │   ├── roles/           one role per concern (base, hardening, tailscale, …)
 │   └── secrets/         age-encrypted material (gitignored)
-├── agents/              AGENTS.md + cross-agent skills — see agents/README.md
+├── agents/              AGENTS.md + skills + Claude/Codex runtime config — see agents/README.md
 │   ├── AGENTS.md        always-loaded user instructions for Claude Code + Codex
+│   ├── claude/          Claude Code runtime config (settings.json, …)
 │   └── skills/          on-demand capabilities (parallel-work, clone-repo, …)
 ├── chezmoi/             user-level dotfiles — see chezmoi/README.md
 │   ├── dot_bashrc
+│   ├── dot_claude/symlink_settings.json   symlinks ~/.claude/settings.json into agents/claude/
 │   ├── dot_config/zellij/config.kdl
 │   └── dot_local/bin/
 │       ├── executable_zj                workspace launcher (Zellij sessions)
