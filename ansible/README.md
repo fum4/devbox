@@ -158,7 +158,7 @@ staging ansible_host=49.13.y.y
 
 [devbox:vars]
 ansible_user=fum4
-ansible_ssh_private_key_file=~/.ssh/id_ed25519_vps_hetzner
+ansible_ssh_private_key_file=~/.ssh/id_ed25519_devbox_hetzner
 ```
 
 Run as before — Ansible applies to all hosts in the group. Use `-l <host>` to target one.
