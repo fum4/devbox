@@ -98,10 +98,40 @@ Common failures:
 | Role | Likely cause | Fix |
 |---|---|---|
 | `base` | apt repo unreachable | Retry; intermittent network |
-| `tailscale` | auth key invalid/expired | Generate fresh one, re-run with `TAILSCALE_AUTHKEY=tskey-... --tags tailscale` |
+| `tailscale` | OAuth credentials issue | See "Tailscale OAuth failures" below |
 | `claude` | claude.ai/install.sh changed | Manually `curl claude.ai/install.sh \| bash` on the VPS; investigate |
 | `repos` | github-identity didn't run / .pub stale | See above sections |
 | `docker` | conflicting `docker.io` package | `sudo apt purge docker.io && sudo apt autoremove`, then re-run |
+
+## Tailscale OAuth failures
+
+The role's OAuth path has four steps; each can fail differently. To re-run just this role:
+
+```bash
+ansible-playbook -i inventory.ini site.yml --tags tailscale -vvv
+```
+
+| Failing task | Likely cause | Fix |
+|---|---|---|
+| `Decrypt Tailscale OAuth client secret on the controller` | `secrets.local` missing or wrong key | Restore from password manager → `~/_work/devbox/secrets.local`, chmod 600 |
+| same | `ansible/secrets/tailscale-oauth.age` not encrypted to your age recipient | Re-encrypt: see [tailscale.md](tailscale.md) section 6 step 4 |
+| `Exchange OAuth credentials for an access token` (HTTP 401) | client_secret revoked or doesn't match the client_id | Redo OAuth bootstrap with a fresh client ([tailscale.md](tailscale.md) section 6) |
+| `Mint a fresh single-use Tailscale auth key via API` (HTTP 403, "calling actor does not have enough permissions") | OAuth client missing `auth_keys:write` scope, or `tag:devbox` not in `tagOwners` of the ACL | Edit ACL at https://login.tailscale.com/admin/acls/file to add `tag:devbox` under `tagOwners`. If the scope is wrong, regenerate the client with the correct scope. |
+| `Bring Tailscale up via OAuth-minted key` (key rejected) | Minted key already consumed (e.g. you ran `tailscale up` manually in between) | Re-run — a fresh key will be minted |
+
+### Emergency manual auth
+
+If the OAuth path is broken and you need to bring the VPS online now:
+
+```bash
+# Option A: generate a one-shot key in the Tailscale admin and use env var:
+TAILSCALE_AUTHKEY=tskey-... ansible-playbook -i inventory.ini site.yml --tags tailscale
+
+# Option B: bring tailscale up directly on the VPS via the Hetzner console:
+sudo tailscale up --ssh  # browser auth via printed URL
+```
+
+Then fix the OAuth client and re-run normally on the next provision.
 
 ## Claude session offline on phone
 

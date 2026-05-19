@@ -4,7 +4,7 @@ The provisioning runbook — what you run to take a freshly-created Hetzner VPS 
 
 **End state**: VPS with all tools installed, GitHub identity wired, repos cloned + their deps installed, Claude session driveable from your phone.
 
-**Time**: ~15 min walltime, ~3 min of your attention.
+**Time**: ~15 min walltime, ~2 min of your attention.
 
 ## Prerequisites
 
@@ -12,7 +12,7 @@ All set-up done once. If any are missing, do them first:
 
 - Laptop set up per [laptop.md](laptop.md) (`secrets.local` restored, ansible/age/gh installed, SSH keys generated)
 - Hetzner account ready per [hetzner.md](hetzner.md) (project + SSH key uploaded)
-- Tailscale account ready per [tailscale.md](tailscale.md)
+- Tailscale account ready per [tailscale.md](tailscale.md), with the OAuth client bootstrapped (`ansible/secrets/tailscale-oauth.age` committed)
 - GitHub identity bootstrapped per [github.md](github.md) (`ansible/secrets/github-*.age` committed)
 
 ## 0. Pre-flight (optional but smart)
@@ -43,18 +43,7 @@ Hetzner Console → your project → **Servers** → **Add Server**:
 
 **Create & Buy now**. Wait ~30 sec for status to flip to **Running**. **Copy the IPv4 address.**
 
-## 2. Generate a Tailscale auth key
-
-https://login.tailscale.com/admin/settings/keys → **Generate auth key**:
-
-- Description: `devbox-rebuild-YYYY-MM-DD`
-- Reusable: **off**
-- Ephemeral: **off**
-- Expiration: 1 day
-
-Copy the `tskey-...` value. You'll pass it to Ansible in step 4.
-
-## 3. Update local config with the new IP
+## 2. Update local config with the new IP
 
 ```bash
 # Clear stale known_hosts (the old VPS's host key is invalid for the new IP)
@@ -86,11 +75,11 @@ ssh -i ~/.ssh/id_ed25519_devbox_hetzner root@<NEW_IPv4> 'uname -a'
 # Expected: Linux ... Debian 12 ...
 ```
 
-## 4. Run the playbook
+## 3. Run the playbook
 
 ```bash
 cd ~/_work/devbox/ansible
-TAILSCALE_AUTHKEY=tskey-... ansible-playbook -i inventory.ini site.yml
+ansible-playbook -i inventory.ini site.yml
 ```
 
 ~10 minutes. What runs:
@@ -99,7 +88,7 @@ TAILSCALE_AUTHKEY=tskey-... ansible-playbook -i inventory.ini site.yml
 |---|---|
 | `base` | apt update, base packages, `fum4` user, sudoers, copy SSH key |
 | `hardening` | disable root SSH + password auth, ufw |
-| `tailscale` | install + `tailscale up --ssh --authkey=…` |
+| `tailscale` | install + OAuth-mint single-use key + `tailscale up --ssh` |
 | `runtimes` | mise (per-project Node/Bun/pnpm) |
 | `agent-tools` | ripgrep, fd, jq, gh |
 | `claude` | Claude Code CLI |
@@ -113,7 +102,7 @@ TAILSCALE_AUTHKEY=tskey-... ansible-playbook -i inventory.ini site.yml
 | `github-identity` | decrypt + install age-encrypted GitHub SSH key + PAT |
 | `repos` | clone every repo in `repos.txt`, `mise install`, `mise run setup` |
 
-## 5. Swap inventory to `fum4` (idempotency check)
+## 4. Swap inventory to `fum4` (idempotency check)
 
 The `base` role just created `fum4`. The `hardening` role just disabled root SSH. So the next Ansible run must come in as `fum4`:
 
@@ -130,7 +119,7 @@ ansible-playbook -i inventory.ini site.yml
 
 Should report mostly `ok=...` with very few `changed=...`. If anything shows `changed` on this second pass, the corresponding role has a non-idempotent task — file a fix.
 
-## 6. Claude login (interactive — only remaining one)
+## 5. Claude login (interactive — only remaining one)
 
 ```bash
 ssh devbox
@@ -151,7 +140,7 @@ When it confirms you're signed in:
 /exit
 ```
 
-## 7. Per-project bring-up
+## 6. Per-project bring-up
 
 For each repo in `~/code/` that you'll work on actively:
 
@@ -178,7 +167,7 @@ mise run infra:up         # if defined; otherwise pnpm dev:infra or docker compo
 mise run api:dev
 ```
 
-## 8. Phone verification
+## 7. Phone verification
 
 Open Claude app on the phone:
 
@@ -187,7 +176,7 @@ Open Claude app on the phone:
 
 For Expo Go testing (mobile apps): see [mobile.md](mobile.md) step 3.
 
-## 9. Cleanup
+## 8. Cleanup
 
 ### Tailscale admin
 
@@ -206,19 +195,18 @@ If you took a snapshot before destruction (for insurance), delete it now that th
 After everything's set up:
 
 1. Hetzner UI: create VPS (~1 min click-around)
-2. Tailscale UI: generate auth key (~30 sec)
-3. Edit two files locally (inventory + ssh config + ssh-keygen -R) (~1 min)
-4. `claude /login` (interactive OAuth) (~30 sec)
-5. Per project: `zj <repo>` + `/remote-control` (interactive)
+2. Edit two files locally (inventory + ssh config + ssh-keygen -R) (~1 min)
+3. `claude /login` (interactive OAuth) (~30 sec)
+4. Per project: `zj <repo>` + `/remote-control` (interactive)
 
-Everything else is one command: `ansible-playbook ...`.
+Everything else is one command: `ansible-playbook ...`. Tailscale auth is fully automated via the OAuth client (see [tailscale.md](tailscale.md) section 6).
 
 ## Things that go wrong (and where to look)
 
 | Symptom | Where |
 |---|---|
 | `ssh root@<ip>` fails with "Permission denied" | Hetzner SSH key entry not ticked when creating VPS — recreate or attach key via UI |
-| `tailscale up` fails with auth | Auth key expired / one-shot already used — generate a new one, re-run with `--tags tailscale` |
+| `tailscale up` fails with auth | OAuth client revoked / `tag:devbox` not in tagOwners — see [tailscale.md](tailscale.md) section 6 and [recovery.md](recovery.md) |
 | `gh auth status` fails | PAT expired — rotate per [github.md](github.md) |
 | `git clone` fails despite identity installed | Stale `.pub` issue or new GitHub key wasn't registered — [recovery.md](recovery.md) |
 | Playbook hangs / partial fail | Re-run — Ansible is idempotent; tag the failed phase with `--tags <name>` to isolate |
