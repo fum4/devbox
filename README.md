@@ -24,13 +24,15 @@ devbox/
 │   └── secrets/         age-encrypted material (gitignored)
 ├── agents/              AGENTS.md + cross-agent skills — see agents/README.md
 │   ├── AGENTS.md        always-loaded user instructions for Claude Code + Codex
-│   └── skills/          on-demand capabilities (parallel-work, …)
-└── chezmoi/             user-level dotfiles — see chezmoi/README.md
-    ├── dot_bashrc
-    ├── dot_config/zellij/config.kdl
-    └── dot_local/bin/
-        ├── executable_zj    workspace launcher (Zellij sessions)
-        └── executable_wt    worktree + PR + merge wrapper
+│   └── skills/          on-demand capabilities (parallel-work, clone-repo, …)
+├── chezmoi/             user-level dotfiles — see chezmoi/README.md
+│   ├── dot_bashrc
+│   ├── dot_config/zellij/config.kdl
+│   └── dot_local/bin/
+│       ├── executable_zj                workspace launcher (Zellij sessions)
+│       ├── executable_wt                worktree + PR + merge wrapper
+│       └── executable_devbox-scaffold   scaffolds .mise.toml + zellij.kdl for a new repo
+└── repos.txt            repos cloned on every fresh provision (kost, devbox, …)
 ```
 
 Each subdirectory has its own README. **Read top to bottom**: start here, then `ansible/README.md` (provisioning), `chezmoi/README.md` (dotfiles), and `agents/README.md` (agent instructions + skills).

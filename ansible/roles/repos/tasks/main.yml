@@ -1,0 +1,74 @@
+---
+# Clone every repo in ../../../repos.txt to ~/code/<basename> on the VPS.
+# Gated on `gh auth status` since clones use SSH/HTTPS auth that gh sets up.
+#
+# To re-run after `gh auth login`:
+#   ansible-playbook -i inventory.ini site.yml --tags repos
+
+- name: Check that gh is authenticated (clones depend on it)
+  command: gh auth status
+  register: gh_auth_check
+  failed_when: false
+  changed_when: false
+  become_user: "{{ devbox_user }}"
+
+- name: Notice — gh not authenticated, skipping repo clones
+  debug:
+    msg: |
+      `gh auth status` reports not authenticated; skipping repos role.
+      To finish:
+        1. ssh devbox
+        2. gh auth login           (use SSH protocol — see clone-repo skill)
+        3. ansible-playbook -i inventory.ini site.yml --tags repos
+  when: gh_auth_check.rc != 0
+
+- name: Ensure ~/code exists
+  file:
+    path: "/home/{{ devbox_user }}/code"
+    state: directory
+    owner: "{{ devbox_user }}"
+    group: "{{ devbox_user }}"
+    mode: "0755"
+  when: gh_auth_check.rc == 0
+
+- name: Read repos.txt
+  slurp:
+    src: "{{ playbook_dir }}/../repos.txt"
+  register: repos_raw
+  delegate_to: localhost
+  become: false
+  when: gh_auth_check.rc == 0
+
+- name: Parse repos list
+  set_fact:
+    repos_list: >-
+      {{ (repos_raw.content | b64decode).splitlines()
+         | map('trim')
+         | reject('match', '^#')
+         | reject('match', '^$')
+         | list }}
+  when: gh_auth_check.rc == 0
+
+- name: Clone repos to ~/code/<basename>
+  git:
+    repo: >-
+      {{ item if (':' in item or '://' in item) else 'git@github.com:' + item + '.git' }}
+    dest: >-
+      /home/{{ devbox_user }}/code/{{ (item | basename) | regex_replace('\.git$', '') }}
+    update: false        # don't auto-pull on re-run; sync happens via `wt`
+    accept_hostkey: true
+  loop: "{{ repos_list | default([]) }}"
+  become_user: "{{ devbox_user }}"
+  when: gh_auth_check.rc == 0
+  register: clone_result
+  failed_when: false   # don't abort the playbook if one repo fails (private, archived, etc.)
+
+- name: Report any clone failures
+  debug:
+    msg: "Failed to clone: {{ item.item }} — {{ item.msg | default('check gh auth + repo access') }}"
+  loop: "{{ clone_result.results | default([]) }}"
+  when:
+    - gh_auth_check.rc == 0
+    - item.failed | default(false)
+  loop_control:
+    label: "{{ item.item }}"

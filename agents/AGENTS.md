@@ -22,6 +22,7 @@ The VPS itself is provisioned declaratively from `~/code/devbox` (Ansible + chez
 | **Tailscale** | Private mesh. Use tailnet IPs (`100.x.y.z`), never the public IP. |
 | **`wt`** | Worktree + PR + merge wrapper (see below). Use this instead of raw `git worktree` / `gh pr` / other git related commands. |
 | **`gh`** | GitHub CLI. Use for git related actions not available through `wt`. |
+| **`devbox-scaffold`** | Generate `.mise.toml` + `zellij.kdl` for a new repo. Invoked via the [`clone-repo`](skills/clone-repo/SKILL.md) skill, which inspects the repo and proposes the right args before running. |
 | **ripgrep** (`rg`), **fd**, **jq** | Search and JSON parsing. Prefer over `grep -r` / `find` / `python -m json.tool`. |
 | **process-compose** | Headless service orchestration (Postgres, Redis, workers). Not for TUIs. |
 | **ntfy** | Push notifications to phone (installed dormant — `curl -d "msg" ntfy.sh/$NTFY_TOPIC` once a topic is wired). |
@@ -78,5 +79,6 @@ If you find yourself wanting to `git pull` on a default branch manually, you don
 | Start new unrelated work | `wt new <task>` (creates worktree branched from `origin/<default>`) |
 | Open a PR | `wt pr` (rebase + push + `gh pr create`) |
 | Merge + clean up | `wt merge` |
+| Clone + set up a new repo | use the `clone-repo` skill — clones from `github.com/fum4/<repo>` by default, proposes `devbox-scaffold` args, waits for user confirmation |
 
-For when to use a worktree (and when not), the `parallel-work` skill in `~/.agents/skills/parallel-work/SKILL.md` has the full decision tree.
+For when to use a worktree (and when not), the `parallel-work` skill in `~/.agents/skills/parallel-work/SKILL.md` has the full decision tree. For onboarding a new repo onto the devbox, the `clone-repo` skill walks through clone → inspect → confirm → scaffold.

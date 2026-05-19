@@ -1,0 +1,164 @@
+#!/bin/bash
+# devbox-scaffold — generate .mise.toml + zellij.kdl in the cwd from devbox
+# templates so a new repo can be opened with `zj <name>` and managed with mise.
+#
+# USAGE
+#   devbox-scaffold [--name <project>] [--force] [<tab>[:<task>] ...]
+#
+# Each <tab> arg becomes a Zellij tab in addition to the standard
+# shell + claude tabs. With :<task>, the tab auto-runs `mise run <task>`
+# via bash -ic AND a placeholder task block is added to .mise.toml.
+# Without :<task>, the tab is just an empty shell pane.
+#
+# BEHAVIOR ON EXISTING FILES
+#   By default, the script writes only the files that are MISSING. If
+#   ./.mise.toml or ./zellij.kdl already exists, it is left untouched
+#   (script prints a notice). This makes the workflow safe to run after
+#   cloning a repo that already has one or both files — only the gaps
+#   get filled in.
+#
+# FLAGS
+#   --name <project>   project name (default: basename of cwd)
+#   --force            overwrite existing .mise.toml / zellij.kdl
+#   --help, -h         show this help
+#
+# EXAMPLES
+#   devbox-scaffold api:api:dev
+#     → tabs: shell, claude, api (running `mise run api:dev`)
+#
+#   devbox-scaffold mobile:mobile:dev api:api:dev worker
+#     → tabs: shell, claude, mobile (running mise mobile:dev),
+#             api (running mise api:dev), worker (empty)
+#
+# OUTPUT FILES
+#   ./.mise.toml    Node/Bun/pnpm versions + task placeholders to fill in
+#   ./zellij.kdl    Workspace layout (committed alongside the repo's source)
+
+set -euo pipefail
+
+die() { echo "devbox-scaffold: $*" >&2; exit 1; }
+
+show_help() {
+    sed -n '2,/^set -euo/p' "$0" | sed '$d' | sed 's/^# \?//'
+}
+
+force=0
+project=""
+tabs=()
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --force)   force=1; shift ;;
+        --name)    [[ $# -ge 2 ]] || die "--name needs a value"; project="$2"; shift 2 ;;
+        --help|-h) show_help; exit 0 ;;
+        --)        shift; while [[ $# -gt 0 ]]; do tabs+=("$1"); shift; done ;;
+        -*)        die "unknown flag: $1 (try --help)" ;;
+        *)         tabs+=("$1"); shift ;;
+    esac
+done
+
+[[ -z "$project" ]] && project=$(basename "$PWD")
+
+# Decide what to write. Existing files are skipped unless --force.
+write_zellij=true
+write_mise=true
+skipped=()
+if [[ -e ./zellij.kdl && $force -eq 0 ]]; then
+    write_zellij=false
+    skipped+=("./zellij.kdl")
+fi
+if [[ -e ./.mise.toml && $force -eq 0 ]]; then
+    write_mise=false
+    skipped+=("./.mise.toml")
+fi
+
+if [[ "$write_zellij" == "false" && "$write_mise" == "false" ]]; then
+    echo "Nothing to do — both files already exist:"
+    for f in "${skipped[@]}"; do echo "  $f"; done
+    echo "(Use --force to overwrite.)"
+    exit 0
+fi
+
+# Build zellij tabs + mise tasks blocks
+zellij_tabs=""
+mise_tasks=""
+for spec in "${tabs[@]:-}"; do
+    [[ -z "$spec" ]] && continue
+    if [[ "$spec" == *:* ]]; then
+        tab_name="${spec%%:*}"
+        task="${spec#*:}"
+        zellij_tabs+="    tab name=\"$tab_name\" {
+        pane {
+            command \"bash\"
+            args \"-ic\" \"mise run $task\"
+        }
+    }
+"
+        mise_tasks+="[tasks.\"$task\"]
+description = \"TODO: describe the '$task' task\"
+run = \"# TODO: fill in — e.g. pnpm $task\"
+
+"
+    else
+        zellij_tabs+="    tab name=\"$spec\"
+"
+    fi
+done
+
+written=()
+
+if [[ "$write_zellij" == "true" ]]; then
+    cat > zellij.kdl <<EOF
+// $project dev workspace. Launch with: \`zj $project\`.
+// \`bash -ic\` wrappers so panes pick up PATH from ~/.bashrc (mise, claude, ~/bin).
+layout {
+    default_tab_template {
+        pane size=1 borderless=true {
+            plugin location="zellij:tab-bar"
+        }
+        children
+        pane size=2 borderless=true {
+            plugin location="zellij:status-bar"
+        }
+    }
+    tab name="shell" focus=true
+    tab name="claude" {
+        pane {
+            command "bash"
+            args "-ic" "claude"
+        }
+    }
+$zellij_tabs}
+EOF
+    written+=("./zellij.kdl   ($project workspace)")
+fi
+
+if [[ "$write_mise" == "true" ]]; then
+    cat > .mise.toml <<EOF
+[tools]
+node = "24"
+bun = "1.3"
+pnpm = "10"
+
+$mise_tasks
+EOF
+    written+=("./.mise.toml   (tool versions + task placeholders)")
+fi
+
+echo "Wrote:"
+for f in "${written[@]}"; do echo "  $f"; done
+
+if [[ ${#skipped[@]} -gt 0 ]]; then
+    echo ""
+    echo "Skipped (already exists; --force to overwrite):"
+    for f in "${skipped[@]}"; do echo "  $f"; done
+fi
+
+echo ""
+echo "Next:"
+if [[ "$write_mise" == "true" ]]; then
+    echo "  1. Edit .mise.toml — replace the 'run = # TODO' lines with real commands."
+fi
+echo "  • mise install"
+echo "  • Install package deps (pnpm install / cargo build / etc.)"
+echo "  • zj $project"
+echo "  • Commit zellij.kdl + .mise.toml when ready."

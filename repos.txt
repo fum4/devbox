@@ -1,0 +1,23 @@
+# Repos cloned automatically on every fresh devbox provision.
+#
+# One per line. Comments start with #. Blank lines ignored.
+# Shorthand "user/repo" expands to git@github.com:user/repo.git.
+# For non-GitHub remotes, use the full clone URL on its own line:
+#   git@gitlab.com:org/repo.git
+#   https://example.com/git/repo.git
+#
+# Each repo is cloned to ~/code/<basename> on the VPS. The `repos`
+# Ansible role does this after `gh auth status` confirms auth is set
+# up — if not, the role skips with a notice and you re-run it via
+# `--tags repos` after `gh auth login`.
+#
+# Add a repo here by:
+#   1. The clone-repo skill asks the user after a successful onboard.
+#   2. Or edit this file by hand and commit + push.
+#
+# Don't add ephemeral repos (one-off PR contributions, throwaway
+# experiments). Only persistent projects that should follow you to
+# every new devbox.
+
+fum4/devbox
+fum4/kost

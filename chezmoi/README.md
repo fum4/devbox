@@ -31,8 +31,9 @@ chezmoi/
 │       └── config.kdl               → ~/.config/zellij/config.kdl
 └── dot_local/
     └── bin/
-        ├── executable_zj            → ~/.local/bin/zj   (chmod +x)
-        └── executable_wt            → ~/.local/bin/wt   (chmod +x)
+        ├── executable_zj                  → ~/.local/bin/zj                  (chmod +x)
+        ├── executable_wt                  → ~/.local/bin/wt                  (chmod +x)
+        └── executable_devbox-scaffold     → ~/.local/bin/devbox-scaffold     (chmod +x)
 ```
 
 ### `dot_bashrc`
@@ -88,11 +89,24 @@ wt help                  # full reference
 
 The 30-min `wt prune` cron is installed by the `agents` Ansible role.
 
+### `dot_local/bin/executable_devbox-scaffold`
+
+Generates `./zellij.kdl` and `./.mise.toml` in a freshly-cloned repo, using the devbox's standard boilerplate (tab-bar + status-bar layout, always-on `shell` and `claude` tabs) plus per-project tabs passed as args:
+
+```bash
+devbox-scaffold api:api:dev mobile:mobile:dev worker
+# → tabs: shell, claude, api (runs `mise run api:dev`),
+#         mobile (runs `mise run mobile:dev`), worker (empty)
+```
+
+Invoked via the [`clone-repo`](../agents/skills/clone-repo/SKILL.md) skill — the skill inspects the repo first, proposes the right args, and waits for user confirmation before running.
+
 ## Public API
 
-- The destination paths (`~/.bashrc`, `~/.config/zellij/config.kdl`, `~/.local/bin/zj`, `~/.local/bin/wt`) are the public surface.
+- The destination paths (`~/.bashrc`, `~/.config/zellij/config.kdl`, `~/.local/bin/zj`, `~/.local/bin/wt`, `~/.local/bin/devbox-scaffold`) are the public surface.
 - `zj` is the human/agent-facing way to attach to a project workspace.
 - `wt` is the human/agent-facing way to drive the worktree → PR → merge lifecycle.
+- `devbox-scaffold` is the human/agent-facing way to scaffold a new repo's dev contract (`.mise.toml` + `zellij.kdl`).
 
 ## How to extend
 
