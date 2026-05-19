@@ -118,7 +118,7 @@ No central registry. The repo is the source of truth for "how to run me."
 ### Adding a new app (~3 min after the first)
 
 ```bash
-ssh vps
+ssh devbox
 cd ~/code && git clone <repo>
 cd <repo> && mise install
 zj <project>                                 # alias: zellij attach -c <project> --layout ./zellij.kdl
@@ -182,13 +182,13 @@ The validation gate.
 4. Update `inventory.ini` with new IP.
 5. From laptop: `ansible-playbook -i ansible/inventory.ini ansible/site.yml`.
 6. Wait ~10 min.
-7. `ssh vps && zj kost` → end-to-end check.
+7. `ssh devbox && zj kost` → end-to-end check.
 
 If anything is wrong, fix the playbook (Ansible is idempotent — re-run safely).
 
 ### Phase 3 — Add a second app (whenever)
 
-1. `ssh vps; cd ~/code; git clone <repo>`
+1. `ssh devbox; cd ~/code; git clone <repo>`
 2. Add `.mise.toml` + `zellij.kdl` to the repo (commit).
 3. `mise install && zj <repo>`.
 4. Done.

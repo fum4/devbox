@@ -23,7 +23,7 @@ Each role does one concern. Roles run in the order in `site.yml`:
 ## Prerequisites
 
 - **Ansible** ≥ 2.16 on your laptop (`brew install ansible` on macOS).
-- **SSH access** to the VPS, key-based. Your `~/.ssh/config` should have a `Host vps` entry pointing at the VPS's public IPv4 with the right private key. (The root README's "First-time setup" covers this.)
+- **SSH access** to the VPS, key-based. Your `~/.ssh/config` should have a `Host devbox` entry pointing at the VPS's public IPv4 with the right private key. (The root README's "First-time setup" covers this.)
 - **Tailscale auth key** if you want the playbook to authenticate the box without a browser visit. Get one at https://login.tailscale.com/admin/settings/keys (pre-authorized, reusable=no, expiry=24h is fine). Pass via the `TAILSCALE_AUTHKEY` env var; the playbook picks it up via `group_vars/all.yml`.
 
 ## File layout

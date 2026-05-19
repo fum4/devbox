@@ -107,14 +107,14 @@ See [`docs/plan.md`](docs/plan.md) for the rationale on each choice and what was
      -i ansible/inventory.ini ansible/site.yml
    ```
 5. **After the first successful run**, edit `inventory.ini` to use `ansible_user=fum4` (since the `base` role just created that user). Subsequent runs go through it.
-6. **One-time Claude login**: SSH in (`ssh vps`), run `claude`, type `/login`, complete the browser OAuth.
+6. **One-time Claude login**: SSH in (`ssh devbox`), run `claude`, type `/login`, complete the browser OAuth.
 
 That's it. The box is ready.
 
 ### Daily workflow (after setup)
 
 ```bash
-ssh vps            # tailnet-aware alias (see ~/.ssh/config on your laptop)
+ssh devbox            # tailnet-aware alias (see ~/.ssh/config on your laptop)
 zj kost            # attach to or create the kost workspace
                    #   ─ shell tab (ad-hoc)
                    #   ─ claude tab (auto-runs `claude`)
