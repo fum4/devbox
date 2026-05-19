@@ -24,16 +24,24 @@
     direction: in
     comment: "Tailscale"
 
-- name: Bring Tailscale up with auth key (and enable Tailscale SSH)
-  command: "tailscale up --ssh --authkey={{ tailscale_auth_key }}"
-  args:
-    creates: /var/lib/tailscale/tailscaled.state
-  when: tailscale_auth_key | length > 0
+- name: Check current Tailscale auth state
+  command: tailscale status
+  register: ts_status
+  failed_when: false
+  changed_when: false
 
-- name: Notice — no auth key provided, Tailscale not yet authenticated
+- name: Bring Tailscale up with auth key (only if not yet authenticated)
+  command: "tailscale up --ssh --authkey={{ tailscale_auth_key }}"
+  when:
+    - tailscale_auth_key | length > 0
+    - ts_status.rc != 0 or 'Logged out' in ts_status.stdout
+
+- name: Notice — Tailscale not yet authenticated and no auth key provided
   debug:
     msg: |
       Tailscale installed but not authenticated.
       Run on the VPS: sudo tailscale up --ssh
       Or re-run this playbook with TAILSCALE_AUTHKEY=tskey-... set.
-  when: tailscale_auth_key | length == 0
+  when:
+    - tailscale_auth_key | length == 0
+    - ts_status.rc != 0 or 'Logged out' in ts_status.stdout
