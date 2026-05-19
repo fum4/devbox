@@ -102,7 +102,7 @@ This is the preferred Tailscale auth path. One-time setup; from then on every pr
 
 3. Save the client_id. Open `ansible/group_vars/all.yml` and set `tailscale_oauth_client_id` to the value Tailscale showed. This is non-secret (analogous to a username) and lives in plaintext in the repo.
 
-4. Encrypt the client_secret. Run on the laptop, replacing the value with the secret from the modal:
+4. Encrypt the client_secret, **on the laptop** — replace the placeholder with the secret from the modal:
 
    ```bash
    cd ~/_work/devbox
@@ -112,7 +112,7 @@ This is the preferred Tailscale auth path. One-time setup; from then on every pr
 
    This writes the encrypted secret to `ansible/secrets/tailscale-oauth.age` — commit it. The decryption key is `secrets.local` (gitignored, in your password manager). Now you can dismiss the Tailscale modal.
 
-5. Test:
+5. Test, **on the laptop:**
 
    ```bash
    cd ansible

@@ -4,6 +4,8 @@ How the devbox stores secrets next to its code without leaking them, and what to
 
 > Sister docs: [`laptop.md`](laptop.md) (overall laptop bootstrap), [`github.md`](github.md) (the GitHub identity that uses this pattern), [`tailscale.md`](tailscale.md) §6 (the Tailscale OAuth client that uses this pattern), [`recovery.md`](recovery.md) (incident response).
 
+> All commands in this doc run **on the laptop**. The age private key (`secrets.local`) lives there exclusively — decryption never happens on the VPS.
+
 ## The pattern in one paragraph
 
 We use `age` (a small public-key encryption tool) with a single keypair. The **public key** lives in plaintext at the top of `secrets.local` and is the *recipient* of every encrypted file. The **private key** lives in the same file and is the *only* thing that can decrypt those files. We commit the `*.age` files to the repo; `secrets.local` itself is gitignored and backed up to your password manager. Ansible decrypts secrets on the **controller** (your laptop) at playbook runtime, holds the plaintext in memory, and either consumes it directly (e.g. POST to an API) or pushes it over SSH to the VPS. The VPS never has the age private key.

@@ -4,6 +4,8 @@ This document covers the **persistent GitHub identity** used by the devbox: a lo
 
 > Sister docs: [`laptop.md`](laptop.md) (the controller side this depends on), [`secrets.md`](secrets.md) (the encryption pattern used here), [`provisioning.md`](provisioning.md) (when this role runs during provisioning), [`recovery.md`](recovery.md) (what to do when it breaks).
 
+> All commands in this doc run **on the laptop**. Exceptions are labeled.
+
 ## Why
 
 Without this, every fresh provision requires:
@@ -155,6 +157,8 @@ After it runs:
 The `repos` role (which runs immediately after) can now clone everything in `repos.txt` on the first try.
 
 ## Verifying after a rebuild
+
+**On the laptop** (the quoted commands execute on the VPS via one-shot SSH):
 
 ```bash
 ssh devbox 'ssh -T git@github.com && gh auth status'

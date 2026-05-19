@@ -4,6 +4,8 @@ Set up the phone to drive agents on the devbox and test mobile apps via Tailscal
 
 **End state**: Tailscale connected, Claude mobile app signed in with a live session for at least one project, Expo Go ready to load apps over the tailnet.
 
+> Most steps in this doc are **on the phone** (App Store / iOS / Android UI). The few command-line bits are explicitly labeled **on the laptop** or **on the VPS**.
+
 ## Prerequisites
 
 - iOS or Android phone
@@ -46,9 +48,9 @@ When both are true, the Code tab shows the session with a green dot. Tap it → 
 
 If no sessions appear:
 
-- Open `zj <project>` on the VPS → switch to the claude tab → if Claude isn't running, start it (`claude`)
-- Inside Claude TUI: `/remote-control` → choose "Enable Remote Control"
-- Pull-to-refresh in the mobile app's Code tab
+- **On the VPS** (via `ssh devbox` from the laptop): `zj <project>` → switch to the claude tab → if Claude isn't running, start it (`claude`).
+- **Inside the Claude TUI**: `/remote-control` → choose "Enable Remote Control".
+- **On the phone**: pull-to-refresh in the mobile app's Code tab.
 
 ## 3. Install Expo Go (only if working on mobile apps like kost)
 
@@ -56,15 +58,15 @@ App Store / Play Store → **Expo Go** → install. No login needed.
 
 To connect to a Metro dev server running on the devbox:
 
-1. Make sure Tailscale is ON on the phone
-2. Make sure Metro is running on the VPS (per the project's Zellij `mobile` tab, via `mise run mobile:dev` or similar)
-3. **Option A — paste the URL**: open Expo Go → there's an "Enter URL manually" field somewhere on the home screen → paste:
+1. **On the phone**: make sure Tailscale is ON.
+2. **On the VPS**: make sure Metro is running (per the project's Zellij `mobile` tab, via `mise run mobile:dev` or similar).
+3. **Option A — paste the URL** (on the phone): open Expo Go → there's an "Enter URL manually" field somewhere on the home screen → paste:
    ```
    exp://devbox:8081       (if MagicDNS resolves)
    exp://100.x.y.z:8081    (raw tailnet IP — get from `tailscale ip -4` on the VPS or from the Tailscale admin console)
    ```
-4. **Option B — scan QR**: ssh to the VPS, `zj <project>`, switch to mobile tab — Metro's QR is printed there. Scan with your phone camera (Expo Go intercepts the URL).
-5. **Option C — direct URL in Safari/Chrome**: type `exp://devbox:8081` in your phone browser → it'll offer to open in Expo Go → confirm.
+4. **Option B — scan QR**: **on the laptop**, `ssh devbox`, then **on the VPS**: `zj <project>` and switch to the mobile tab. Metro's QR is printed there. **On the phone**, scan with the camera (Expo Go intercepts the URL).
+5. **Option C — direct URL in Safari/Chrome on the phone**: type `exp://devbox:8081` → it'll offer to open in Expo Go → confirm.
 
 The bundle takes 10-30 sec to download the first time, then the app launches.
 
@@ -88,7 +90,7 @@ If/when OpenAI ships Linux remote control: the Codex CLI is already installed on
 
 ## Recovery if the phone setup gets borked
 
-- **Claude session disappears**: open Claude app → Code tab → if list is empty, the VPS-side `/remote-control` got terminated. Re-enable: ssh devbox → `zj <project>` → claude tab → `/remote-control`.
+- **Claude session disappears**: **on the phone**, open Claude app → Code tab → if the list is empty, the VPS-side `/remote-control` got terminated. To re-enable: **on the laptop**, `ssh devbox` → **on the VPS**, `zj <project>` → claude tab → **inside the Claude TUI**, `/remote-control`.
 - **Tailscale dropped**: toggle the VPN off + on. If still broken, sign out + sign back in.
 - **Phone lost / replaced**: reinstall Tailscale (sign in, same account) + Claude (sign in, same account) + Expo Go. Nothing on the phone is irreplaceable — all state lives on the VPS.
 

@@ -4,6 +4,8 @@ Take a fresh macOS install (or a laptop where you've lost the setup) and bring i
 
 **End state**: Homebrew installed, age/ansible/gh on PATH, SSH keys generated and registered with the right accounts, `~/_work/devbox/` cloned with its `secrets.local` restored from your password manager.
 
+> All commands in this doc run **on the laptop** (your Mac). No VPS exists yet at this stage.
+
 ## Prerequisites
 
 - macOS (Apple Silicon or Intel)

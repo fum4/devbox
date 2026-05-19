@@ -6,6 +6,14 @@ The provisioning runbook — what you run to take a freshly-created Hetzner VPS 
 
 **Time**: ~15 min walltime, ~2 min of your attention.
 
+## Where each command runs
+
+Three contexts appear in this doc; every code block is labeled with one of them.
+
+- **On the laptop** — your Mac. The devbox repo is at `~/_work/devbox`. Ansible runs from here.
+- **On the VPS** — after `ssh devbox`. The devbox repo is at `~/code/devbox`. Linux.
+- **Inside the Claude TUI** — the `claude` REPL running inside a VPS shell. Slash-commands (`/login`, `/remote-control`, …), not bash.
+
 ## Prerequisites
 
 All set-up done once. If any are missing, do them first:
@@ -17,7 +25,9 @@ All set-up done once. If any are missing, do them first:
 
 ## 0. Pre-flight (optional but smart)
 
-If you're rebuilding to replace a still-running VPS, save anything that's not in git:
+If you're rebuilding to replace a still-running VPS, save anything that's not in git.
+
+**On the laptop** (executes the quoted command on the VPS via one-shot SSH):
 
 ```bash
 ssh devbox 'for r in ~/code/*/; do [[ -d "$r/.git" ]] || continue; echo "=== $(basename $r) ==="; cd "$r"; git status -s; git log --oneline @{u}..HEAD 2>/dev/null; done'
@@ -32,6 +42,8 @@ If there's nothing surprising, proceed.
 Follow [hetzner.md §5 → Create a VPS](hetzner.md#5-create-a-vps). Copy the IPv4 address when it's running — step 2 needs it.
 
 ## 2. Update local config with the new IP
+
+**On the laptop:**
 
 ```bash
 # Clear stale known_hosts (the old VPS's host key is invalid for the new IP)
@@ -56,7 +68,7 @@ ansible_ssh_private_key_file=~/.ssh/devbox_vps
 ansible_ssh_common_args='-o StrictHostKeyChecking=accept-new'
 ```
 
-Smoke test:
+Smoke test, **on the laptop** (the `uname -a` itself executes on the VPS but `ssh` is initiated from here):
 
 ```bash
 ssh -i ~/.ssh/devbox_vps root@<NEW_IPv4> 'uname -a'
@@ -64,6 +76,8 @@ ssh -i ~/.ssh/devbox_vps root@<NEW_IPv4> 'uname -a'
 ```
 
 ## 3. Run the playbook
+
+**On the laptop** (Ansible runs here and configures the VPS over SSH):
 
 ```bash
 cd ~/_work/devbox/ansible
@@ -92,14 +106,16 @@ ansible-playbook -i inventory.ini site.yml
 
 ## 4. Swap inventory to `fum4` (idempotency check)
 
-The `base` role just created `fum4`. The `hardening` role just disabled root SSH. So the next Ansible run must come in as `fum4`:
+The `base` role just created `fum4`. The `hardening` role just disabled root SSH. So the next Ansible run must come in as `fum4`.
+
+**On the laptop:**
 
 ```bash
 $EDITOR inventory.ini
 # Change: ansible_user=root → ansible_user=fum4
 ```
 
-Re-run for idempotency:
+Re-run for idempotency, **on the laptop:**
 
 ```bash
 ansible-playbook -i inventory.ini site.yml
@@ -109,20 +125,27 @@ Should report mostly `ok=...` with very few `changed=...`. If anything shows `ch
 
 ## 5. Claude login (interactive — only remaining one)
 
+**On the laptop**, open a shell on the VPS:
+
 ```bash
 ssh devbox
+```
+
+**On the VPS** (the line above put you there), launch Claude:
+
+```bash
 claude
 ```
 
-Inside Claude TUI:
+**Inside the Claude TUI:**
 
 ```
 /login
 ```
 
-Open the printed URL on the laptop browser → sign in → click **Authorize** → copy the code → paste back at the Claude prompt → Enter.
+Open the printed URL **in your laptop browser** → sign in → click **Authorize** → copy the code → paste it at the Claude prompt → Enter.
 
-When it confirms you're signed in:
+When it confirms you're signed in, **inside the Claude TUI:**
 
 ```
 /exit
@@ -130,13 +153,15 @@ When it confirms you're signed in:
 
 ## 6. Per-project bring-up
 
-For each repo in `~/code/` that you'll work on actively:
+For each repo in `~/code/` (the VPS path) that you'll work on actively, **on the VPS** (still ssh'd from step 5, or `ssh devbox` again):
 
 ```bash
 zj <repo>                   # launches the project's Zellij workspace (per zellij.kdl)
 ```
 
-In the Zellij session, switch to the **claude** tab (`Ctrl+T 2`). Inside Claude:
+In the Zellij session, switch to the **claude** tab (`Ctrl+T 2`). Claude is auto-launched there.
+
+**Inside the Claude TUI:**
 
 ```
 /remote-control
@@ -146,8 +171,15 @@ Choose **Enable Remote Control**. The session appears in your phone Claude app �
 
 If the project needs local infra (kost uses Docker for Postgres/Redis/MinIO):
 
+**On the laptop:**
+
 ```bash
 ssh devbox
+```
+
+**On the VPS:**
+
+```bash
 zj kost
 # Ctrl+T 1 (shell tab)
 mise run infra:up         # if defined; otherwise pnpm dev:infra or docker compose up -d

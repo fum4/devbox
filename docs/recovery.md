@@ -4,6 +4,16 @@ What to do when things break. Organized by symptom → likely cause → fix.
 
 If you've genuinely lost your laptop or your age key (catastrophic), start with the relevant section. Otherwise it's almost certainly fixable in 5 minutes.
 
+## Where each command runs
+
+Code blocks below are labeled with one of three contexts.
+
+- **On the laptop** — your Mac. `~/_work/devbox` is the repo.
+- **On the VPS** — after `ssh devbox`. `~/code/devbox` is the repo. Linux.
+- **Inside the Claude TUI** — slash-commands inside the `claude` REPL on the VPS.
+
+When unlabeled, the command runs on the laptop (the default context for recovery work, since the laptop is the controller).
+
 ## Laptop lost / replaced
 
 You're on a new machine and need to restore everything.
@@ -13,13 +23,13 @@ You're on a new machine and need to restore everything.
 3. **Restore `secrets.local`** from your password manager — see [`secrets.md`](secrets.md) → "Restoring on a new laptop" for the verification loop.
 4. **Update Hetzner** with the new laptop's `devbox_vps.pub` → Hetzner Console → Security → SSH Keys → Add (or replace the old `laptop` entry).
 5. **Update the existing VPS's `~/.ssh/authorized_keys`** so the new laptop can ssh in:
-   - From any device that already has access (e.g. another laptop, or via the Hetzner Console *Rescue* mode):
+   - From any device that already has access (e.g. another laptop, or via the Hetzner Console *Rescue* mode), **on the VPS** (or in the Rescue console):
      ```bash
      echo "$(cat /path/to/new-laptop-devbox_vps.pub)" >> /home/fum4/.ssh/authorized_keys
      ```
    - If you have no way in: easier to rebuild the VPS — Hetzner UI → create a new one with the new laptop's key, then run the playbook.
 6. **Delete the old laptop's keys from GitHub + Hetzner** to revoke its access.
-7. **Verify**:
+7. **Verify, on the laptop:**
    ```bash
    ssh -T git@github.com    # Hi fum4!
    ssh devbox 'whoami'      # fum4
@@ -34,14 +44,14 @@ If all three pass, you're back.
 
 This is recoverable but requires re-bootstrapping the GitHub identity. Steps:
 
-1. Generate a fresh age keypair: `age-keygen -o ~/_work/devbox/secrets.local && chmod 600 ~/_work/devbox/secrets.local`. **Back up to password manager immediately.**
+1. **On the laptop**, generate a fresh age keypair: `age-keygen -o ~/_work/devbox/secrets.local && chmod 600 ~/_work/devbox/secrets.local`. **Back up to password manager immediately.**
 2. Generate a fresh GitHub SSH key (per [github.md](github.md) → bootstrap step 3).
 3. Encrypt it to the new age recipient (bootstrap step 4).
 4. Upload the new public key to GitHub Settings → SSH Keys (bootstrap step 5). Delete the old `devbox` entry (the private half is gone forever — useless).
 5. Generate a fresh PAT (bootstrap step 6) → revoke the old PAT on Settings → Tokens.
 6. Encrypt the new PAT (bootstrap step 7).
 7. Commit + push the new `.age` files.
-8. On every VPS still running: re-run the role to install the new identity:
+8. On every VPS still running: re-run the role to install the new identity. **On the laptop:**
    ```bash
    cd ~/_work/devbox/ansible
    ansible-playbook -i inventory.ini site.yml --tags github-identity
@@ -54,8 +64,8 @@ Nothing in the devbox is permanently lost — source code lives in git, all conf
 Causes ordered by likelihood:
 
 1. **Stale `.pub` file on the VPS** — OpenSSH offers whatever public key is alongside the private. If a previous `gh auth login` left a different `.pub`, OpenSSH offers the wrong key.
-   - Fix: `ssh devbox 'ssh-keygen -y -f ~/.ssh/github-ssh > ~/.ssh/github-ssh.pub'`. Then re-run `ansible-playbook --tags github-identity` (the role does this idempotently).
-2. **Public key not registered on GitHub** — check https://github.com/settings/keys. The `devbox` entry's fingerprint should match:
+   - Fix, **on the laptop** (the `ssh-keygen` runs on the VPS via one-shot SSH): `ssh devbox 'ssh-keygen -y -f ~/.ssh/github-ssh > ~/.ssh/github-ssh.pub'`. Then re-run `ansible-playbook --tags github-identity` (the role does this idempotently).
+2. **Public key not registered on GitHub** — check https://github.com/settings/keys. The `devbox` entry's fingerprint should match. **On the laptop:**
    ```bash
    age -d -i ~/_work/devbox/secrets.local ~/_work/devbox/ansible/secrets/github-ssh.age > /tmp/k
    chmod 600 /tmp/k && ssh-keygen -y -f /tmp/k > /tmp/k.pub
@@ -69,7 +79,7 @@ Causes ordered by likelihood:
 
 1. **PAT expired** — see [github.md](github.md) → "Rotation → PAT rotation."
 2. **PAT scope changed on GitHub side** — the PAT must have `repo`, `read:org`, `workflow`. Regenerate with correct scopes.
-3. **Token file deleted manually** — re-run the role:
+3. **Token file deleted manually** — re-run the role, **on the laptop:**
    ```bash
    ansible-playbook -i inventory.ini site.yml --tags github-identity
    ```
@@ -87,11 +97,11 @@ Causes ordered by likelihood:
 
 Ansible is idempotent — **just re-run it**. Roles that already succeeded will report `ok` and skip; the failing role will retry.
 
-If a specific role fails repeatedly:
+If a specific role fails repeatedly (all **on the laptop**):
 
 - **Tag-isolate**: `ansible-playbook -i inventory.ini site.yml --tags <role-name>` to focus.
 - **Verbose mode**: append `-vvv` for the full stack trace from the remote.
-- **Check logs**: `ssh devbox 'journalctl -e -n 50'` for systemd events; `tail -f /tmp/wt-prune.log` etc. for service-specific logs.
+- **Check logs**: `ssh devbox 'journalctl -e -n 50'` for systemd events on the VPS; or `ssh devbox 'tail -f /tmp/wt-prune.log'` for service-specific logs.
 
 Common failures:
 
@@ -105,7 +115,7 @@ Common failures:
 
 ## Tailscale OAuth failures
 
-The role's OAuth path has four steps; each can fail differently. To re-run just this role:
+The role's OAuth path has four steps; each can fail differently. To re-run just this role, **on the laptop:**
 
 ```bash
 ansible-playbook -i inventory.ini site.yml --tags tailscale -vvv
@@ -123,11 +133,15 @@ ansible-playbook -i inventory.ini site.yml --tags tailscale -vvv
 
 If the OAuth path is broken and you need to bring the VPS online now:
 
-```bash
-# Option A: generate a one-shot key in the Tailscale admin and use env var:
-TAILSCALE_AUTHKEY=tskey-... ansible-playbook -i inventory.ini site.yml --tags tailscale
+**Option A** — generate a one-shot key in the Tailscale admin and use env var, **on the laptop:**
 
-# Option B: bring tailscale up directly on the VPS via the Hetzner console:
+```bash
+TAILSCALE_AUTHKEY=tskey-... ansible-playbook -i inventory.ini site.yml --tags tailscale
+```
+
+**Option B** — bring tailscale up directly **on the VPS** (open a shell via the Hetzner Console if SSH is unreachable):
+
+```bash
 sudo tailscale up --ssh  # browser auth via printed URL
 ```
 
@@ -135,25 +149,25 @@ Then fix the OAuth client and re-run normally on the next provision.
 
 ## Claude session offline on phone
 
-1. **VPS Zellij session died** — `ssh devbox && zj <project>` to bring it back up (idempotent).
-2. **Claude TUI exited inside the session** — switch to claude tab, run `claude` again, then `/remote-control`.
-3. **`/remote-control` not active** — inside Claude, `/remote-control` again. Different from `/remote-control` running — must be the *Enable Remote Control* state.
+1. **VPS Zellij session died** — **on the laptop:** `ssh devbox`, then **on the VPS:** `zj <project>` (idempotent).
+2. **Claude TUI exited inside the session** — **on the VPS** in the Zellij claude tab, run `claude` again, then **inside the Claude TUI:** `/remote-control`.
+3. **`/remote-control` not active** — **inside the Claude TUI:** run `/remote-control` and choose *Enable Remote Control*.
 4. **Anthropic relay outage** (rare) — https://status.anthropic.com.
 
 ## Metro / Expo Go can't reach Metro
 
 1. **Tailscale off on phone** — toggle on.
 2. **`REACT_NATIVE_PACKAGER_HOSTNAME` not set** — the project's `start:tailscale` task sets it. If Metro was started with plain `start`, the QR has the wrong host. Restart with `mise run mobile:dev` (which calls `start:tailscale`).
-3. **VPS firewall blocking** — `ssh devbox 'sudo ufw status'` should show `tailscale0` allowed. If not, re-run `--tags hardening,tailscale`.
+3. **VPS firewall blocking** — **on the laptop** (the ufw query runs on the VPS via one-shot SSH): `ssh devbox 'sudo ufw status'` should show `tailscale0` allowed. If not, re-run `--tags hardening,tailscale`.
 4. **Phone on different tailnet** — Tailscale admin console → check devices. If phone is on a different account, sign out + sign back in with the right account.
 
 ## Docker fails — "permission denied"
 
 The user `fum4` must be in the `docker` group. The `docker` Ansible role adds this, but **group membership only takes effect on new shells**.
 
-- If you opened a Zellij session BEFORE the role ran, that session's panes don't have docker group → `docker` commands fail.
-- Fix: `exit` the Zellij session (`Ctrl+O d` to detach is not enough — actually exit each shell), reconnect (`ssh devbox`), `zj <project>` fresh. New shells pick up the group.
-- Workaround if you don't want to restart shells: `newgrp docker` in the current shell, then docker works (only for that shell).
+- If you opened a Zellij session **on the VPS** BEFORE the role ran, that session's panes don't have docker group → `docker` commands fail.
+- Fix: **on the VPS**, `exit` the Zellij session (`Ctrl+O d` to detach is not enough — actually exit each shell), reconnect (`ssh devbox` from the laptop), then **on the VPS** start fresh with `zj <project>`. New shells pick up the group.
+- Workaround if you don't want to restart shells: **on the VPS**, `newgrp docker` in the current shell, then docker works (only for that shell).
 
 ## Whole-VPS rebuild from a degraded state
 
