@@ -39,7 +39,7 @@ Hetzner Console → your project → **Servers** → **Add Server**:
 | Networking | Public IPv4 + IPv6 (defaults) |
 | SSH Keys | ✓ `devbox` (uploaded per [hetzner.md](hetzner.md)) |
 | Backups | off |
-| Name | `dev` (or whatever) |
+| Name | `devbox` (becomes the hostname; consistent with the SSH alias + Tailscale machine name) |
 
 **Create & Buy now**. Wait ~30 sec for status to flip to **Running**. **Copy the IPv4 address.**
 
