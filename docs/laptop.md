@@ -154,14 +154,18 @@ If any file fails with `no identity matched any recipient`, the restored key doe
 
 ## 9. Sanity check
 
+Run the doctor — it verifies every prerequisite this doc has established (binaries on PATH, both SSH keys present and parseable, `~/.ssh/config` blocks correct, `secrets.local` decrypts every `.age` file in the repo, GitHub auth works, Ansible playbook parses):
+
 ```bash
 cd ~/_work/devbox
-ansible-playbook --syntax-check ansible/site.yml
-ls -la secrets.local                           # should exist, mode 600
-git status                                     # working tree should be clean
+./bin/doctor
 ```
 
-If all three are happy, the laptop is ready. Next: create a Hetzner VPS ([hetzner.md](hetzner.md)) and provision it ([provisioning.md](provisioning.md)).
+Expected: `All checks passed. Laptop is ready to run ansible-playbook.` Any ✗ comes with a hint pointing at the doc section that fixes it.
+
+Also useful **later**, not just on first setup — re-run anytime something feels broken (`ssh devbox` mysteriously failing, `git push` failing, etc.) to route to the right doc section. See [`../bin/README.md`](../bin/README.md) for more.
+
+Next: create a Hetzner VPS ([hetzner.md](hetzner.md)) and provision it ([provisioning.md](provisioning.md)).
 
 ## What you DON'T need to install on the laptop
 

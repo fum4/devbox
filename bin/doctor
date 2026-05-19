@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+# bin/doctor — verify the laptop is provisioning-ready.
+#
+# Read-only. Checks each prerequisite docs/laptop.md establishes and reports
+# what's missing. Run after each laptop.md step on a fresh setup, or anytime
+# something feels broken later.
+#
+# Exit 0 if everything passes, non-zero (= number of failures) otherwise.
+
+# Note: not using `pipefail` because some valid auth probes (ssh -T against
+# GitHub) exit non-zero from intermediate pipe stages even on success — the
+# pipeline's final grep is what we actually want to gate on.
+set -u
+
+# Resolve repo root from script location (so it works from any cwd)
+REPO="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$REPO"
+
+# Pull the canonical "who owns this devbox" value from Ansible vars rather
+# than hardcoding. One source of truth across the whole repo.
+DEVBOX_USER=$(awk -F': *' '/^devbox_user:/ {gsub(/"/,"",$2); print $2}' ansible/group_vars/all.yml)
+if [[ -z "$DEVBOX_USER" ]]; then
+  echo "ERROR: could not read devbox_user from ansible/group_vars/all.yml" >&2
+  exit 2
+fi
+
+if [[ -t 1 ]]; then
+  GREEN=$'\e[32m'; RED=$'\e[31m'; DIM=$'\e[2m'; RESET=$'\e[0m'
+else
+  GREEN=""; RED=""; DIM=""; RESET=""
+fi
+
+fails=0
+
+check() {
+  local label="$1" cmd="$2" hint="$3"
+  if eval "$cmd" >/dev/null 2>&1; then
+    printf "  %s✓%s %s\n" "$GREEN" "$RESET" "$label"
+  else
+    printf "  %s✗%s %s\n    %s→%s %s\n" "$RED" "$RESET" "$label" "$DIM" "$RESET" "$hint"
+    fails=$((fails + 1))
+  fi
+}
+
+section() { printf "\n%s\n" "$1"; }
+
+section "Binaries on PATH"
+for bin in brew age ansible gh ssh-keygen git; do
+  check "$bin" "command -v $bin" "brew install $bin — docs/laptop.md §2"
+done
+
+section "SSH keys (~/.ssh/)"
+GH_KEY="$HOME/.ssh/id_ed25519_github_${DEVBOX_USER}"
+VPS_KEY="$HOME/.ssh/devbox_vps"
+check "$GH_KEY exists"     "[[ -f '$GH_KEY' ]]"             "ssh-keygen per docs/laptop.md §3"
+check "$GH_KEY parses"     "ssh-keygen -y -f '$GH_KEY'"     "Key file corrupted — regenerate per docs/laptop.md §3"
+check "$VPS_KEY exists"    "[[ -f '$VPS_KEY' ]]"            "ssh-keygen per docs/laptop.md §3"
+check "$VPS_KEY parses"    "ssh-keygen -y -f '$VPS_KEY'"    "Key file corrupted — regenerate per docs/laptop.md §3"
+
+section "SSH config (~/.ssh/config)"
+check "Host github.com block present" \
+      "grep -q '^Host github.com' ~/.ssh/config" \
+      "Add the block per docs/laptop.md §4"
+check "Host devbox block present" \
+      "grep -q '^Host devbox' ~/.ssh/config" \
+      "Add the block per docs/laptop.md §4"
+check "Host devbox references devbox_vps" \
+      "awk '/^Host devbox\$/{p=1; next} p && /^Host /{p=0} p' ~/.ssh/config | grep -q 'IdentityFile.*devbox_vps'" \
+      "Update IdentityFile in the Host devbox block — docs/laptop.md §4"
+
+section "Age key (secrets.local)"
+check "secrets.local exists at repo root" \
+      "[[ -f secrets.local ]]" \
+      "Restore from password manager — docs/secrets.md → 'Restoring on a new laptop'"
+check "secrets.local is mode 0600" \
+      "[[ \$(stat -f '%Lp' secrets.local 2>/dev/null) == '600' ]]" \
+      "chmod 600 secrets.local"
+check "secrets.local has AGE-SECRET-KEY header" \
+      "grep -q '^AGE-SECRET-KEY-1' secrets.local" \
+      "File content is wrong — restore from password manager"
+
+section "Encrypted secrets (ansible/secrets/*.age)"
+if [[ -f secrets.local ]]; then
+  shopt -s nullglob
+  for f in ansible/secrets/*.age; do
+    check "$f decrypts" \
+          "age -d -i secrets.local '$f'" \
+          "Age key doesn't match the recipient this file was encrypted to — docs/secrets.md → 'Restoring on a new laptop'"
+  done
+  shopt -u nullglob
+else
+  printf "  %s—%s skipped (secrets.local missing)\n" "$DIM" "$RESET"
+fi
+
+section "Live GitHub auth"
+check "ssh -T git@github.com → Hi ${DEVBOX_USER}!" \
+      "ssh -T git@github.com 2>&1 | grep -q 'Hi ${DEVBOX_USER}'" \
+      "Public key not registered on GitHub — docs/laptop.md §5"
+
+section "Ansible playbook syntax"
+check "ansible/site.yml parses" \
+      "ansible-playbook --syntax-check ansible/site.yml" \
+      "Playbook has a syntax error — run with -vvv for details"
+
+echo
+if [[ $fails -eq 0 ]]; then
+  printf "%sAll checks passed.%s Laptop is ready to run ansible-playbook.\n" "$GREEN" "$RESET"
+  exit 0
+else
+  printf "%s%d check(s) failed.%s Address them, then re-run ./bin/doctor.\n" "$RED" "$fails" "$RESET"
+  exit 1
+fi

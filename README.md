@@ -32,6 +32,8 @@ devbox/
 │       ├── executable_zj                workspace launcher (Zellij sessions)
 │       ├── executable_wt                worktree + PR + merge wrapper
 │       └── executable_devbox-scaffold   scaffolds .mise.toml + zellij.kdl for a new repo
+├── bin/                 laptop-side utility scripts — see bin/README.md
+│   └── doctor           verify the laptop is provisioning-ready
 ├── docs/                end-to-end setup + recovery guides — see docs/README.md
 │   ├── laptop.md        fresh mac bootstrap (brew, age, ssh keys, clone)
 │   ├── hetzner.md       account, payment, project, SSH key upload
