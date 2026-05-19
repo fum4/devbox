@@ -15,22 +15,23 @@ ansible-playbook -i ansible/inventory.ini ansible/site.yml
 ```
 devbox/
 ├── README.md            ← you are here
-├── docs/
-│   └── plan.md          design + decisions log + phase breakdown
 ├── ansible/             provisioning — see ansible/README.md
 │   ├── ansible.cfg
 │   ├── inventory.ini.example
 │   ├── group_vars/all.yml
-│   ├── site.yml         top-level playbook (11 roles)
+│   ├── site.yml         top-level playbook (13 roles)
 │   ├── roles/           one role per concern (base, hardening, tailscale, …)
 │   └── secrets/         age-encrypted material (gitignored)
+├── agents/              AGENTS.md + cross-agent skills — see agents/README.md
+│   ├── AGENTS.md        always-loaded user instructions for Claude Code + Codex
+│   └── skills/          on-demand capabilities (parallel-work, …)
 └── chezmoi/             user-level dotfiles — see chezmoi/README.md
     ├── dot_bashrc
     ├── dot_config/zellij/config.kdl
     └── dot_local/bin/executable_zj
 ```
 
-Each subdirectory has its own README. **Read top to bottom**: start here, then `docs/plan.md` for the why, then `ansible/README.md` and `chezmoi/README.md` for the how.
+Each subdirectory has its own README. **Read top to bottom**: start here, then `ansible/README.md` (provisioning), `chezmoi/README.md` (dotfiles), and `agents/README.md` (agent instructions + skills).
 
 ## The architecture in one diagram
 
@@ -86,8 +87,6 @@ Each subdirectory has its own README. **Read top to bottom**: start here, then `
 | **ntfy.sh** | Push notifications to phone | For long-running tasks ("build done") |
 | **`gh` + ripgrep + fd + jq** | Tools the agent uses | Agent-facing, not human ergonomics |
 
-See [`docs/plan.md`](docs/plan.md) for the rationale on each choice and what was rejected.
-
 ---
 
 ## How to use this repo
@@ -137,7 +136,7 @@ Three minutes after the first one:
 
 No central config change. Each repo carries its own dev contract.
 
-### Recovering from VPS death (Phase 2 of [plan.md](docs/plan.md))
+### Recovering from VPS death
 
 The playbook is idempotent and complete. To rebuild:
 
@@ -155,7 +154,7 @@ Recoverable state: code (git), dotfiles (this repo), tools (Ansible roles). Non-
 - **Commits**: Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`).
 - **Push policy**: human-authorized. Local commits free; pushes need explicit go-ahead.
 - **Secrets**: never committed in plaintext. Use age-encrypted files under `ansible/secrets/`, or pass through env vars (e.g. `TAILSCALE_AUTHKEY`).
-- **Docs as truth**: if `docs/plan.md` disagrees with running code, the code is right and the doc is a bug. Fix the doc.
+- **Docs as truth**: if a README disagrees with running code, the code is right and the doc is a bug. Fix the doc in the same change.
 
 ## Where things live (other repos)
 

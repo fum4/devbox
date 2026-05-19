@@ -17,8 +17,10 @@ Each role does one concern. Roles run in the order in `site.yml`:
 | 7 | `zellij` | Install Zellij static binary | Workspace layer — used by `zj` to attach to project sessions |
 | 8 | `claude-squad` | Install Claude Squad (parallel-agent TUI) | Optional, but cheap; here so it's always available |
 | 9 | `process-compose` | Install the binary (no services configured yet) | Available for headless service stacks (DB/Redis) when needed |
-| 10 | `ntfy` | Install the ntfy CLI binary | Installed dormant — no topics or systemd subscriptions wired up |
-| 11 | `dotfiles` | Install chezmoi, `chezmoi init --apply --source=../chezmoi` | Last — needs the user, mise activated, all tools in place |
+| 10 | `docker` | Install Docker Engine + Compose plugin | Local infra stacks (Postgres/Redis/MinIO for projects); per-repo `compose.yml` brings them up |
+| 11 | `ntfy` | Install the ntfy CLI binary | Installed dormant — no topics or systemd subscriptions wired up |
+| 12 | `agents` | Symlink `~/.agents/{AGENTS.md,skills}` into `~/code/devbox/agents/`; install the `wt prune` cron | Needs the user (base) and a checkout of this repo on the VPS |
+| 13 | `dotfiles` | Install chezmoi, `chezmoi init --apply --source=../chezmoi` | Last — needs the user, mise activated, all tools in place |
 
 ## Prerequisites
 
@@ -98,8 +100,8 @@ ansible-playbook -i inventory.ini site.yml --skip-tags tools
 
 Tags currently defined:
 - `bootstrap` — base, hardening, tailscale (the "boot from nothing" subset)
-- `tools` — runtimes, agent-tools, claude, zellij, claude-squad, process-compose, ntfy
-- `dotfiles` — chezmoi apply
+- `tools` — runtimes, agent-tools, claude, zellij, claude-squad, process-compose, docker, ntfy
+- `dotfiles` — agents + chezmoi apply
 - One tag per role (e.g. `--tags claude`)
 
 ### Dry-run

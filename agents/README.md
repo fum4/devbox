@@ -9,7 +9,6 @@ agents/
 ├── README.md           ← this file
 ├── AGENTS.md           ← user-level instructions, loaded into every session
 └── skills/
-    ├── README.md
     └── <skill-name>/
         ├── SKILL.md
         └── (optional: scripts/ references/ assets/)
@@ -17,21 +16,25 @@ agents/
 
 ## How it materializes on the VPS
 
-The `agents` Ansible role rsyncs this directory to `~/.agents/` on the VPS, then symlinks each agent's expected paths at it:
+The `agents` Ansible role symlinks `~/.agents/` straight into the devbox checkout, then symlinks each agent's expected paths at it:
 
 ```
-~/.agents/                          ← canonical (open-standard location)
+~/code/devbox/agents/        ← canonical source (this directory, checked out on the VPS)
+        ▲
+        │ symlinks
+        │
+~/.agents/                   ← agent-facing location (Agent Skills open standard)
 ├── AGENTS.md
+├── README.md
 └── skills/
 
 ~/.claude/CLAUDE.md  → ~/.agents/AGENTS.md
 ~/.claude/skills     → ~/.agents/skills
 ~/.codex/AGENTS.md   → ~/.agents/AGENTS.md
-~/.codex/skills      → ~/.agents/skills          (Codex actually reads ~/.agents/skills natively;
-                                                  this symlink is for consistency)
+~/.codex/skills      → ~/.agents/skills
 ```
 
-**One source of truth.** Edit a file under `agents/` on your laptop, run the `agents` Ansible role (or `--tags agents`), both agents on the VPS see the change.
+**One source of truth, live edits.** Editing a file under `~/code/devbox/agents/` *is* editing the deployed file — no rsync, no `chezmoi apply`, no ansible re-run. Both agents see the change on their next session.
 
 ## AGENTS.md vs skills — when to use which
 
@@ -51,19 +54,56 @@ Keep it concise — every line costs context on every session.
 
 A skill's body stays in context for the rest of the session once loaded. State what to do, not why.
 
+## SKILL.md format
+
+Each skill is a directory under `skills/` containing a `SKILL.md` file with frontmatter:
+
+```markdown
+---
+name: skill-name
+description: One sentence explaining when this skill should auto-trigger.
+---
+
+# Title
+
+Instructions / reference content here.
+```
+
+The `description` is the most important field — both agents use it to decide whether to auto-load the skill for the current task. Lead with the trigger phrasing the user is likely to use.
+
+### Claude-specific frontmatter (Codex ignores)
+
+| Field | Effect |
+|---|---|
+| `disable-model-invocation: true` | Only the user can invoke via `/skill-name`; agent never auto-loads. Good for actions with side effects. |
+| `user-invocable: false` | Only the agent can invoke; hidden from `/` menu. Good for background reference. |
+| `allowed-tools: Bash(git *) Read` | Pre-approve tools while skill is active. |
+| `paths: "**/*.ts"` | Only auto-loads when working on files matching the glob. |
+| `context: fork` | Run in a forked subagent (clean context). |
+
+Codex equivalents live in `openai.yaml` alongside `SKILL.md`. We're not using it yet.
+
+## Currently shipped
+
+| Skill | Triggers on |
+|---|---|
+| [`parallel-work`](skills/parallel-work/) | Starting a new unrelated feature, parallel work, separate bug — guides the agent to use `wt new` for worktrees. |
+
 ## Adding a new skill
 
 1. `mkdir -p agents/skills/<name>`
-2. Create `agents/skills/<name>/SKILL.md` with frontmatter (`name`, `description`) + markdown body
-3. Optionally add `scripts/`, `references/`, or `assets/` subdirs
-4. Re-run the playbook: `ansible-playbook -i ansible/inventory.ini ansible/site.yml --tags agents`
-5. Both Claude and Codex will pick it up on their next session
+2. Write `agents/skills/<name>/SKILL.md` with frontmatter (`name`, `description`) + markdown body
+3. Lead the `description` with the trigger phrasing the user is likely to use
+4. Optionally add `scripts/`, `references/`, or `assets/` subdirs
+5. Commit + push — both agents pick it up on their next session (the symlink chain points here directly, no re-deploy needed)
 
 ## Editing AGENTS.md
 
 1. Edit `agents/AGENTS.md`
-2. Re-deploy: `ansible-playbook ... --tags agents`
+2. Commit + push
 3. Open a fresh session on either agent — new content is loaded
+
+No re-deploy step: `~/.claude/CLAUDE.md` and `~/.codex/AGENTS.md` resolve through `~/.agents/AGENTS.md` straight to this file.
 
 ## Sources
 
