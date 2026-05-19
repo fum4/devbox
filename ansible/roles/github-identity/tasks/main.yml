@@ -1,0 +1,112 @@
+---
+# Install the devbox's persistent GitHub identity from age-encrypted secrets:
+#   ansible/secrets/github-fum4.age   → ~/.ssh/github-fum4              (SSH key)
+#   ansible/secrets/github-pat.age    → gh auth login --with-token     (CLI token)
+#
+# Both secrets are decrypted on the CONTROLLER (your laptop) using ~/.age/key.txt
+# and pushed to the VPS over SSH. The VPS never sees the age private key.
+#
+# See docs/github.md for the bootstrap procedure (one-time, on the laptop).
+# If the .age files are missing, the role skips with a helpful notice — useful
+# for the initial provision before you've done the bootstrap.
+
+- name: Check for encrypted GitHub SSH key
+  stat:
+    path: "{{ playbook_dir }}/secrets/github-fum4.age"
+  register: gh_ssh_secret
+  delegate_to: localhost
+  become: false
+
+- name: Check for encrypted GitHub PAT
+  stat:
+    path: "{{ playbook_dir }}/secrets/github-pat.age"
+  register: gh_pat_secret
+  delegate_to: localhost
+  become: false
+
+- name: Notice — secrets missing, skipping github-identity
+  debug:
+    msg: |
+      Encrypted GitHub secrets not found in ansible/secrets/.
+      See docs/github.md for the one-time bootstrap procedure.
+      Until that's done, you can still authenticate the VPS interactively
+      via `gh auth login` after the playbook completes.
+  when: not (gh_ssh_secret.stat.exists and gh_pat_secret.stat.exists)
+
+- name: Ensure ~/.ssh exists
+  file:
+    path: "/home/{{ devbox_user }}/.ssh"
+    state: directory
+    owner: "{{ devbox_user }}"
+    group: "{{ devbox_user }}"
+    mode: "0700"
+  when: gh_ssh_secret.stat.exists
+
+- name: Decrypt GitHub SSH key on the controller
+  command: age -d -i {{ lookup('env', 'HOME') }}/.age/key.txt {{ playbook_dir }}/secrets/github-fum4.age
+  register: gh_ssh_key
+  delegate_to: localhost
+  become: false
+  no_log: true
+  changed_when: false
+  when: gh_ssh_secret.stat.exists
+
+- name: Install GitHub SSH key on the VPS
+  copy:
+    content: "{{ gh_ssh_key.stdout }}\n"
+    dest: "/home/{{ devbox_user }}/.ssh/github-fum4"
+    owner: "{{ devbox_user }}"
+    group: "{{ devbox_user }}"
+    mode: "0600"
+  no_log: true
+  when: gh_ssh_secret.stat.exists
+
+- name: Configure git's SSH for github.com
+  blockinfile:
+    path: "/home/{{ devbox_user }}/.ssh/config"
+    create: true
+    owner: "{{ devbox_user }}"
+    group: "{{ devbox_user }}"
+    mode: "0600"
+    marker: "# {mark} github.com (managed by devbox/github-identity role)"
+    block: |
+      Host github.com
+        HostName github.com
+        User git
+        IdentityFile ~/.ssh/github-fum4
+        IdentitiesOnly yes
+  when: gh_ssh_secret.stat.exists
+
+- name: Trust github.com host key (avoids first-clone prompt)
+  known_hosts:
+    path: "/home/{{ devbox_user }}/.ssh/known_hosts"
+    name: github.com
+    key: "github.com {{ lookup('pipe', 'ssh-keyscan -t ed25519 github.com 2>/dev/null | grep -v \"^#\" | head -1 | awk \"{print \\$2, \\$3}\"') }}"
+  become_user: "{{ devbox_user }}"
+  when: gh_ssh_secret.stat.exists
+  failed_when: false   # ssh-keyscan can flake on the controller; best-effort
+
+- name: Decrypt GitHub PAT on the controller
+  command: age -d -i {{ lookup('env', 'HOME') }}/.age/key.txt {{ playbook_dir }}/secrets/github-pat.age
+  register: gh_pat
+  delegate_to: localhost
+  become: false
+  no_log: true
+  changed_when: false
+  when: gh_pat_secret.stat.exists
+
+- name: Check existing gh auth state
+  command: gh auth status
+  register: gh_auth_state
+  failed_when: false
+  changed_when: false
+  become_user: "{{ devbox_user }}"
+  when: gh_pat_secret.stat.exists
+
+- name: Authenticate gh CLI with the PAT (only if not already authed)
+  shell: echo "{{ gh_pat.stdout }}" | gh auth login --hostname github.com --git-protocol ssh --with-token
+  become_user: "{{ devbox_user }}"
+  no_log: true
+  when:
+    - gh_pat_secret.stat.exists
+    - gh_auth_state.rc != 0

@@ -49,5 +49,8 @@
     - role: dotfiles            # chezmoi + apply ../chezmoi
       tags: [dotfiles]
 
+    - role: github-identity     # install age-encrypted GitHub SSH key + PAT (see docs/github.md)
+      tags: [github-identity, repos]
+
     - role: repos               # clone every repo in ../repos.txt to ~/code/ (gated on gh auth)
       tags: [repos]

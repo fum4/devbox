@@ -66,6 +66,7 @@ If you find yourself wanting to `git pull` on a default branch manually, you don
 - **Globals via mise, not npm/pnpm**: don't install global npm/pnpm packages. Add them as `[tools]` in a repo's `.mise.toml`.
 - **Don't edit chezmoi-managed files directly**: `~/.bashrc`, `~/.config/zellij/config.kdl`, `~/.local/bin/*`. Edit `~/code/devbox/chezmoi/` and `chezmoi apply` (or run the ansible role).
 - **New tools go through Ansible**: don't `apt install X` ad-hoc. Add a role in `~/code/devbox/ansible/roles/` so the VPS stays reproducible.
+- **GitHub identity is age-encrypted**: this VPS's GitHub SSH key (`~/.ssh/github-fum4`) and the `gh` CLI auth come from `ansible/secrets/github-*.age`, decrypted on the laptop during provisioning. Don't manually `gh auth login` or `ssh-keygen` for GitHub — those changes get clobbered on re-provision and the devbox loses its persistent identity. See `~/code/devbox/docs/github.md` for the rotation procedure.
 
 ## Common operations
 
