@@ -10,7 +10,7 @@ Each role does one concern. Roles run in the order in `site.yml`:
 |---|---|---|---|
 | 1 | `base` | apt upgrade, install base packages, create `fum4` user, sudoers, copy SSH key | Must come first — creates the user later roles run as |
 | 2 | `hardening` | Disable root SSH + password auth, ufw default-deny | Right after `base`: lock down the box before installing anything else |
-| 3 | `tailscale` | Install Tailscale, allow `tailscale0` in ufw, `tailscale up --ssh` | Needed before exposing dev servers (Metro etc.) over the tailnet |
+| 3 | `tailscale` | Install Tailscale, allow `tailscale0` in ufw, OAuth-mint a single-use auth key + `tailscale up --ssh` | Needed before exposing dev servers (Metro etc.) over the tailnet |
 | 4 | `runtimes` | Install **mise** (per-project Node/Bun/pnpm + tasks + env) | Foundation for per-project dev environments |
 | 5 | `agent-tools` | Install ripgrep, fd, jq, gh | Tools the agent shells out to — not human ergonomics |
 | 6 | `claude` | Install Claude Code CLI via the official apt repo | Needs the user (base) and Tailscale (for `/remote-control`) up |
@@ -27,8 +27,12 @@ Each role does one concern. Roles run in the order in `site.yml`:
 ## Prerequisites
 
 - **Ansible** ≥ 2.16 on your laptop (`brew install ansible` on macOS).
+- **`age`** on your laptop (`brew install age`) — used by the controller to decrypt `secrets/*.age` at playbook runtime.
 - **SSH access** to the VPS, key-based. Your `~/.ssh/config` should have a `Host devbox` entry pointing at the VPS's public IPv4 with the right private key. (The root README's "First-time setup" covers this.)
-- **Tailscale auth key** if you want the playbook to authenticate the box without a browser visit. Get one at https://login.tailscale.com/admin/settings/keys (pre-authorized, reusable=no, expiry=24h is fine). Pass via the `TAILSCALE_AUTHKEY` env var; the playbook picks it up via `group_vars/all.yml`.
+- **`secrets.local`** at the repo root (the age private key, restored from your password manager). This decrypts:
+  - `secrets/tailscale-oauth.age` — OAuth client_secret for unattended Tailscale auth (see [`docs/tailscale.md`](../docs/tailscale.md) §6 for the one-time bootstrap)
+  - `secrets/github-fum4.age` + `secrets/github-pat.age` — GitHub identity (see [`docs/github.md`](../docs/github.md))
+- (legacy fallback) **`TAILSCALE_AUTHKEY` env var** — only used when `secrets/tailscale-oauth.age` doesn't exist yet. Generate a one-shot key at https://login.tailscale.com/admin/settings/keys.
 
 ## File layout
 
@@ -64,7 +68,7 @@ cp inventory.ini.example inventory.ini
 # Edit inventory.ini → set the new VPS's public IP
 
 # Run as root (Hetzner's default for freshly created VPSes)
-TAILSCALE_AUTHKEY=tskey-... ansible-playbook -i inventory.ini site.yml
+ansible-playbook -i inventory.ini site.yml
 ```
 
 The `base` role creates the `fum4` user with your SSH key. After the playbook completes:
@@ -149,7 +153,17 @@ rm secrets/foo.txt
 
 In a role, decrypt at runtime via `lookup('pipe', 'age -d -i <keyfile> secrets/foo.age')` or via `community.sops` if you switch to sops.
 
-For now we use environment variables for the one secret we need (`TAILSCALE_AUTHKEY`).
+Three secrets currently live this way:
+
+| File | Decrypts to | Used by |
+|---|---|---|
+| `secrets/tailscale-oauth.age` | OAuth client_secret (`tskey-client-…`) | `tailscale` role — exchanges for an access token, mints a fresh single-use auth key per provision |
+| `secrets/github-fum4.age` | An SSH private key | `github-identity` role — installed at `~/.ssh/github-fum4` on the VPS |
+| `secrets/github-pat.age` | A GitHub PAT (`ghp_…`) | `github-identity` role — fed to `gh auth login --with-token` |
+
+All three are decrypted **on the controller** (your laptop) via `delegate_to: localhost` and `no_log: true`. The plaintext never lands on disk on the VPS — it's pushed in over SSH and either piped into a command or written directly to the destination file in-memory.
+
+The `TAILSCALE_AUTHKEY` env var is the legacy fallback path; the OAuth flow replaces it once `tailscale-oauth.age` is bootstrapped.
 
 ### Add a new host (second VPS)
 
@@ -173,7 +187,8 @@ Run as before — Ansible applies to all hosts in the group. Use `-l <host>` to 
 - The Hetzner SSH-key entry doesn't match your local key, or wasn't ticked when you created the VM. Recreate the VM (billing is hourly), or fix the public key in Hetzner's UI and click "rebuild image."
 
 **`Authentication failed` on tailscale `up`**
-- `TAILSCALE_AUTHKEY` is empty or expired. Generate a fresh one. Or comment out the `tailscale_auth_key` task and run `sudo tailscale up --ssh` manually after the playbook.
+- OAuth path: the role's `Exchange OAuth credentials for an access token` or `Mint a fresh single-use Tailscale auth key via API` step likely returned 4xx. See [`docs/recovery.md`](../docs/recovery.md) → "Tailscale OAuth failures" for the per-task matrix (revoked client, missing scope, `tag:devbox` not in tagOwners).
+- Fallback path: `TAILSCALE_AUTHKEY` is empty or expired. Generate a fresh one at https://login.tailscale.com/admin/settings/keys, or run `sudo tailscale up --ssh` manually after the playbook.
 
 **Re-run says "module command had errors but RC=0"**
 - Usually a shell module without `creates:` running the same install twice. Add `creates: <path>` to make it idempotent.

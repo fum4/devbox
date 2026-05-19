@@ -2,7 +2,7 @@
 
 Tailscale is the **private mesh network** between your phone, laptop, and the devbox VPS. No public ports for dev servers, no DNS to manage, works across cafés / cellular / hotel Wi-Fi.
 
-One-time per Tailscale account (rarely changes). For *generating an auth key for a fresh VPS provision*, see [provisioning.md](provisioning.md).
+One-time per Tailscale account (rarely changes). The unattended VPS auth flow is handled by an OAuth client (section 6 below) — no per-provision manual step.
 
 **End state**: Tailscale account, MagicDNS enabled, phone + laptop joined to the tailnet.
 
@@ -76,6 +76,8 @@ This is the preferred Tailscale auth path. One-time setup; from then on every pr
 - No standing keys to leak; client credentials revocable in one click if compromised
 
 ### Bootstrap (one-time)
+
+**Prereq**: an age recipient already exists at `~/_work/devbox/secrets.local` (created in [`github.md`](github.md) step 2 if you're doing brand-new setup, or restored from your password manager).
 
 1. Tag the auth flow. Open https://login.tailscale.com/admin/acls/file and ensure the policy includes:
 

@@ -8,12 +8,12 @@ Everything you need to set up the devbox from scratch — laptop, Hetzner, Tails
 
 1. [`laptop.md`](laptop.md) — Mac setup, install tools, SSH keys
 2. [`hetzner.md`](hetzner.md) — Hetzner Cloud account + project + SSH key
-3. [`tailscale.md`](tailscale.md) — Tailscale tenant, MagicDNS, auth keys
-4. [`github.md`](github.md) — Age-encrypted GitHub identity (the one-time bootstrap)
+3. [`github.md`](github.md) — Generate the **age keypair** (`secrets.local`) + bootstrap the age-encrypted GitHub identity
+4. [`tailscale.md`](tailscale.md) — Tailscale tenant, MagicDNS, OAuth client (reuses the age recipient from step 3)
 5. [`provisioning.md`](provisioning.md) — Provision the first VPS
 6. [`mobile.md`](mobile.md) — Phone-side apps (Tailscale, Claude, Expo Go)
 
-About 90 minutes start-to-finish if nothing snags.
+About 90 minutes start-to-finish if nothing snags. **Step 3 before step 4** — Tailscale's OAuth bootstrap encrypts a secret using the age recipient that github.md generates.
 
 ### Lost laptop, accounts and secrets still intact
 
@@ -38,7 +38,7 @@ Not a docs flow — use the `clone-repo` skill on the devbox itself. Either tell
 |---|---|---|
 | [`laptop.md`](laptop.md) | Fresh / replaced Mac | Laptop ready to run `ansible-playbook` |
 | [`hetzner.md`](hetzner.md) | First-time Hetzner user | Account + project + SSH key uploaded |
-| [`tailscale.md`](tailscale.md) | First-time Tailscale user | Tailnet up, MagicDNS on, laptop + phone connected |
+| [`tailscale.md`](tailscale.md) | First-time Tailscale user | Tailnet up, MagicDNS on, laptop + phone connected, OAuth client bootstrapped for unattended provisioning |
 | [`github.md`](github.md) | First-time, or rotating secrets | Age-encrypted SSH key + PAT in the repo, public key registered on GitHub |
 | [`provisioning.md`](provisioning.md) | Every VPS provision | Fully configured VPS, agents driveable from phone |
 | [`mobile.md`](mobile.md) | New phone, or after reinstall | Tailscale + Claude + Expo Go ready |

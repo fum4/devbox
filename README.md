@@ -35,7 +35,7 @@ devbox/
 ├── docs/                end-to-end setup + recovery guides — see docs/README.md
 │   ├── laptop.md        fresh mac bootstrap (brew, age, ssh keys, clone)
 │   ├── hetzner.md       account, payment, project, SSH key upload
-│   ├── tailscale.md     account, MagicDNS, auth keys
+│   ├── tailscale.md     account, MagicDNS, OAuth client (zero-touch provisioning)
 │   ├── github.md        age-encrypted GitHub identity (SSH key + PAT)
 │   ├── mobile.md        phone-side apps (Tailscale, Claude, Expo Go)
 │   ├── provisioning.md       the provisioning runbook (every fresh VPS)
@@ -111,11 +111,10 @@ Each subdirectory has its own README. **Read top to bottom**: start here, then `
    cp ansible/inventory.ini.example ansible/inventory.ini
    # edit ansible/inventory.ini → replace <PUBLIC_IP> with the new VPS IP
    ```
-3. **Get a one-shot Tailscale auth key** at https://login.tailscale.com/admin/settings/keys
+3. **Bootstrap the Tailscale OAuth client** (one-time per Tailscale tenant — see [`docs/tailscale.md`](docs/tailscale.md) §6). Skipping this means falling back to the manual `TAILSCALE_AUTHKEY=tskey-...` env-var path each rebuild.
 4. **Run the playbook:**
    ```bash
-   TAILSCALE_AUTHKEY=tskey-... ansible-playbook \
-     -i ansible/inventory.ini ansible/site.yml
+   ansible-playbook -i ansible/inventory.ini ansible/site.yml
    ```
 5. **After the first successful run**, edit `inventory.ini` to use `ansible_user=fum4` (since the `base` role just created that user). Subsequent runs go through it.
 6. **One-time Claude login**: SSH in (`ssh devbox`), run `claude`, type `/login`, complete the browser OAuth.
@@ -165,7 +164,7 @@ Recoverable state: code (git), dotfiles (this repo), tools (Ansible roles). Non-
 - **Branch model**: `main` (no feature branches yet; we're solo).
 - **Commits**: Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`).
 - **Push policy**: human-authorized. Local commits free; pushes need explicit go-ahead.
-- **Secrets**: never committed in plaintext. Use age-encrypted files under `ansible/secrets/`, or pass through env vars (e.g. `TAILSCALE_AUTHKEY`).
+- **Secrets**: never committed in plaintext. Use age-encrypted files under `ansible/secrets/` (the dominant path — Tailscale OAuth, GitHub SSH key, GitHub PAT). Env vars like `TAILSCALE_AUTHKEY` are a legacy fallback only for the pre-bootstrap case.
 - **Docs as truth**: if a README disagrees with running code, the code is right and the doc is a bug. Fix the doc in the same change.
 
 ## Where things live (other repos)
