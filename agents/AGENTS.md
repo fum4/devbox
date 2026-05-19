@@ -11,6 +11,40 @@ The VPS itself is provisioned declaratively from `~/code/devbox` (Ansible + chez
 - **Cross-agent home**: `~/code/devbox/agents/` — `./AGENTS.md` (this file) and `./skills/` (loaded on demand).
 - **Workspaces**: Zellij sessions, one per project. Launch with `zj <project>`.
 
+## Source of truth: the devbox repo
+
+The devbox is *declarative* — its real state lives in `~/code/devbox` (or `~/_work/devbox` on the laptop), not in the live VPS filesystem. Anything you change live on the VPS that isn't reflected in the repo is drift, and dies on the next rebuild.
+
+**When something is broken, misconfigured, or missing, always check the devbox repo first.** The question is never *"how do I fix this on the live VPS?"* — it's *"where in the devbox repo does this fix belong so it survives a rebuild?"* The answer is almost always one of:
+
+| Concern | Lives at |
+|---|---|
+| System packages, services, system config | `ansible/roles/<role>/` |
+| Shell config + dotfiles | `chezmoi/` (mirror the target path under `dot_<path>`) |
+| Per-user scripts on the VPS | `chezmoi/dot_local/bin/executable_<name>` |
+| Laptop-side utility scripts | `bin/<name>` |
+| Age-encrypted secrets | `ansible/secrets/<name>.age` (pattern: [`docs/secrets.md`](../docs/secrets.md)) |
+| Agent rules common across Claude + Codex | this file |
+| Agent skills (on-demand capabilities) | `agents/skills/<name>/SKILL.md` |
+
+Fix it there, commit, push. To make the change take effect on the running VPS: chezmoi-managed → `chezmoi apply`; ansible-managed → `ansible-playbook ... --tags <role>` from the laptop; this file + skills go live via symlink (`~/.agents/` → the repo), no extra step.
+
+Quick-fix-and-forget directly on the live VPS (`sudo apt install X`, hand-edited `~/.bashrc`, manual `gh auth login`, ad-hoc cron entry, …) is **forbidden as a final state** — it creates phantom "why is this broken again?" cycles after the next rebuild. A live-VPS edit is acceptable only as a temporary patch; the durable fix must land in the repo before the work is done.
+
+### Docs ship with infra
+
+Anything that touches user-facing behavior — an integration, credential workflow, runbook step, recovery procedure, command flow, naming convention — gets its matching doc in `docs/` updated in the **same commit** as the code change. The rule: *if `docs/` and the running system disagree, the system is right and the doc is a bug.* Fix it together, or delete the doc if it's no longer accurate. Stale docs are worse than no docs.
+
+The most-touched docs by change type:
+
+| Change | Doc |
+|---|---|
+| Integration added / replaced (Tailscale, GitHub, Hetzner, …) | the named doc (`docs/<name>.md`) |
+| Provisioning flow / Ansible role behavior | `docs/provisioning.md` |
+| Failure-mode handling | `docs/recovery.md` |
+| Encrypted secret added or rotated | `docs/secrets.md` + the relevant integration doc |
+| Naming or path rename | grep across `docs/` + every `*/README.md` |
+
 ## Tools
 
 | Tool | What for |
@@ -60,8 +94,7 @@ If you find yourself wanting to `git pull` on a default branch manually, you don
 - **Don't `sudo`** unless necessary. `fum4` has NOPASSWD sudo but day-to-day work doesn't need it.
 - **Don't expose anything to the public internet.** All inbound traffic except SSH is firewalled; reach dev servers over Tailscale.
 - **Per-repo dev contract**: each repo's `.mise.toml` (tasks) and `zellij.kdl` (workspace) are the source of truth for "how to run this project." Add them when scaffolding a new repo. Every `.mise.toml` should define a `[tasks.setup]` — the first-time install command (`pnpm install`, `cargo fetch`, etc.). The `repos` Ansible role runs it for every cloned repo on every fresh provision, so a rebuilt devbox comes up with all dependencies installed.
-- **The VPS is ephemeral.** Anything not in git or in `~/code/devbox/` is at risk on rebuild. Don't store load-bearing state outside these.
-- **Devbox is the backbone — keep `~/code/devbox` in sync.** This `AGENTS.md`, the `skills/` tree, ansible roles, chezmoi sources, and scripts in `~/.local/bin` all live there. Edit under `~/code/devbox/<path>`, then commit + push. `~/.agents/AGENTS.md` and `~/.agents/skills/` are symlinks into the devbox checkout (and `~/.claude/` + `~/.codex/` resolve through them), so edits go live the moment you save — no copy step. Chezmoi-managed dotfiles (`~/.bashrc`, `~/.config/zellij/config.kdl`, `~/.local/bin/*`) need `chezmoi apply` to re-materialize; ansible-managed system packages/services need the relevant role re-run.
+- **The VPS is ephemeral.** Anything not in git or in `~/code/devbox/` is at risk on rebuild. Don't store load-bearing state outside these. See "Source of truth" above for where each kind of change belongs.
 - **Long-running processes** go in Zellij tabs, not bare SSH sessions. Otherwise they die when SSH drops.
 - **Globals via mise, not npm/pnpm**: don't install global npm/pnpm packages. Add them as `[tools]` in a repo's `.mise.toml`.
 - **Don't edit chezmoi-managed files directly**: `~/.bashrc`, `~/.config/zellij/config.kdl`, `~/.local/bin/*`. Edit `~/code/devbox/chezmoi/` and `chezmoi apply` (or run the ansible role).

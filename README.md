@@ -173,7 +173,7 @@ Recoverable state: code (git), dotfiles (this repo), tools (Ansible roles). Non-
 
 | What | Where |
 |---|---|
-| App code (kost, future projects) | Their own GitHub repos, cloned to `~/code/` on the VPS |
+| App code | Their own GitHub repos, cloned to `~/code/` on the VPS |
 | Project-specific dev contract (tasks, versions, workspace) | In each app's repo: `.mise.toml` + `zellij.kdl` |
 | Personal infrastructure (this VPS) | This repo |
 | Project-specific architecture docs (e.g. kost OCR flow) | Each app's own `docs/` |
