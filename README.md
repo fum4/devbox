@@ -38,7 +38,7 @@ devbox/
 │   ├── tailscale.md     account, MagicDNS, auth keys
 │   ├── github.md        age-encrypted GitHub identity (SSH key + PAT)
 │   ├── mobile.md        phone-side apps (Tailscale, Claude, Expo Go)
-│   ├── rebuild.md       the provisioning runbook (every fresh VPS)
+│   ├── provisioning.md       the provisioning runbook (every fresh VPS)
 │   └── recovery.md      incident response — when something breaks
 └── repos.txt            repos cloned on every fresh provision (kost, devbox, …)
 ```

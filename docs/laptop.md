@@ -83,7 +83,7 @@ EOF
 chmod 600 ~/.ssh/config
 ```
 
-You'll fill in `HostName` for `devbox` when you create the VPS — see [rebuild.md](rebuild.md).
+You'll fill in `HostName` for `devbox` when you create the VPS — see [provisioning.md](provisioning.md).
 
 If you have *multiple* GitHub accounts (e.g., a personal `fum4` and a work `acedisplays`), define each as its own Host:
 
@@ -169,7 +169,7 @@ ls -la secrets.local                           # should exist, mode 600
 git status                                     # working tree should be clean
 ```
 
-If all three are happy, the laptop is ready. Next: create a Hetzner VPS ([hetzner.md](hetzner.md)) and provision it ([rebuild.md](rebuild.md)).
+If all three are happy, the laptop is ready. Next: create a Hetzner VPS ([hetzner.md](hetzner.md)) and provision it ([provisioning.md](provisioning.md)).
 
 ## What you DON'T need to install on the laptop
 

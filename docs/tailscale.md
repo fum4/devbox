@@ -2,7 +2,7 @@
 
 Tailscale is the **private mesh network** between your phone, laptop, and the devbox VPS. No public ports for dev servers, no DNS to manage, works across cafés / cellular / hotel Wi-Fi.
 
-One-time per Tailscale account (rarely changes). For *generating an auth key for a fresh VPS provision*, see [rebuild.md](rebuild.md).
+One-time per Tailscale account (rarely changes). For *generating an auth key for a fresh VPS provision*, see [provisioning.md](provisioning.md).
 
 **End state**: Tailscale account, MagicDNS enabled, phone + laptop joined to the tailnet.
 
@@ -62,7 +62,7 @@ Phone-side details and the rest of the mobile setup live in [mobile.md](mobile.m
 
 ## 5. The devbox VPS
 
-The VPS gets onto the tailnet via the `tailscale` Ansible role during provisioning — see [rebuild.md](rebuild.md). You generate a one-shot auth key, pass it via `TAILSCALE_AUTHKEY` env var, the playbook does the rest.
+The VPS gets onto the tailnet via the `tailscale` Ansible role during provisioning — see [provisioning.md](provisioning.md). You generate a one-shot auth key, pass it via `TAILSCALE_AUTHKEY` env var, the playbook does the rest.
 
 ## Auth keys — how they work and when to use which
 

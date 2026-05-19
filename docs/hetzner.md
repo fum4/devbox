@@ -1,6 +1,6 @@
 # Hetzner Cloud setup
 
-How to set up a Hetzner Cloud account so you can rent a VPS for the devbox. One-time per Hetzner account (rarely changes). For *creating individual VPSes*, see [rebuild.md](rebuild.md).
+How to set up a Hetzner Cloud account so you can rent a VPS for the devbox. One-time per Hetzner account (rarely changes). For *creating individual VPSes*, see [provisioning.md](provisioning.md).
 
 **End state**: Hetzner Cloud account with verified identity, payment method on file, a project named `dev`, your laptop's SSH public key uploaded under Security.
 
@@ -67,7 +67,7 @@ The key now shows in the list with its fingerprint. Every future VPS you create 
 
 ## 5. Don't create a VPS yet
 
-VPS creation is per-rebuild and lives in [rebuild.md](rebuild.md). Stopping here keeps "Hetzner account setup" cleanly separate from "rent a machine."
+VPS creation is per-rebuild and lives in [provisioning.md](provisioning.md). Stopping here keeps "Hetzner account setup" cleanly separate from "rent a machine."
 
 ## Recurring costs
 

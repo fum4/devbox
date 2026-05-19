@@ -10,7 +10,7 @@ Everything you need to set up the devbox from scratch — laptop, Hetzner, Tails
 2. [`hetzner.md`](hetzner.md) — Hetzner Cloud account + project + SSH key
 3. [`tailscale.md`](tailscale.md) — Tailscale tenant, MagicDNS, auth keys
 4. [`github.md`](github.md) — Age-encrypted GitHub identity (the one-time bootstrap)
-5. [`rebuild.md`](rebuild.md) — Provision the first VPS
+5. [`provisioning.md`](provisioning.md) — Provision the first VPS
 6. [`mobile.md`](mobile.md) — Phone-side apps (Tailscale, Claude, Expo Go)
 
 About 90 minutes start-to-finish if nothing snags.
@@ -18,11 +18,11 @@ About 90 minutes start-to-finish if nothing snags.
 ### Lost laptop, accounts and secrets still intact
 
 1. [`laptop.md`](laptop.md) — sets up the new laptop, restores `secrets.local` from password manager
-2. [`rebuild.md`](rebuild.md) — re-provision the VPS so it accepts the new laptop's SSH key (or step 5 in `recovery.md` to keep the same VPS)
+2. [`provisioning.md`](provisioning.md) — re-provision the VPS so it accepts the new laptop's SSH key (or step 5 in `recovery.md` to keep the same VPS)
 
 ### Same laptop, just rebuilding the VPS
 
-[`rebuild.md`](rebuild.md) — the runbook. ~15 min.
+[`provisioning.md`](provisioning.md) — the runbook. ~15 min.
 
 ### Adding a new app to an existing devbox
 
@@ -40,7 +40,7 @@ Not a docs flow — use the `clone-repo` skill on the devbox itself. Either tell
 | [`hetzner.md`](hetzner.md) | First-time Hetzner user | Account + project + SSH key uploaded |
 | [`tailscale.md`](tailscale.md) | First-time Tailscale user | Tailnet up, MagicDNS on, laptop + phone connected |
 | [`github.md`](github.md) | First-time, or rotating secrets | Age-encrypted SSH key + PAT in the repo, public key registered on GitHub |
-| [`rebuild.md`](rebuild.md) | Every VPS provision | Fully configured VPS, agents driveable from phone |
+| [`provisioning.md`](provisioning.md) | Every VPS provision | Fully configured VPS, agents driveable from phone |
 | [`mobile.md`](mobile.md) | New phone, or after reinstall | Tailscale + Claude + Expo Go ready |
 | [`recovery.md`](recovery.md) | Incident response | Symptom → cause → fix matrix |
 

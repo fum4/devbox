@@ -9,7 +9,7 @@ Set up the phone to drive agents on the devbox and test mobile apps via Tailscal
 - iOS or Android phone
 - Tailscale account ([tailscale.md](tailscale.md))
 - Anthropic account with Claude Code access (Pro plan or higher)
-- A running devbox VPS with a Claude session that has `/remote-control` enabled ([rebuild.md](rebuild.md))
+- A running devbox VPS with a Claude session that has `/remote-control` enabled ([provisioning.md](provisioning.md))
 
 ## 1. Install Tailscale
 

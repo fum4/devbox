@@ -1,6 +1,6 @@
-# Rebuild a fresh devbox VPS
+# Provision a devbox VPS
 
-The **provisioning runbook** — what you run to take a freshly-created Hetzner VPS to a fully-configured dev environment. Use this every time a VPS is created (first install, after deletion, after a major upgrade).
+The provisioning runbook — what you run to take a freshly-created Hetzner VPS to a fully-configured dev environment. Same procedure whether this is your **first ever** devbox or your **Nth rebuild** after destroying the previous one.
 
 **End state**: VPS with all tools installed, GitHub identity wired, repos cloned + their deps installed, Claude session driveable from your phone.
 

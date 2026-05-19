@@ -127,7 +127,7 @@ The user `fum4` must be in the `docker` group. The `docker` Ansible role adds th
 
 ## Whole-VPS rebuild from a degraded state
 
-If something on the VPS is so broken you can't easily fix it: **rebuild**. The runbook in [rebuild.md](rebuild.md) takes ~15 min. Nothing on the VPS is irreplaceable:
+If something on the VPS is so broken you can't easily fix it: **rebuild**. The runbook in [provisioning.md](provisioning.md) takes ~15 min. Nothing on the VPS is irreplaceable:
 
 - Code: in git
 - Tool versions / dependencies: re-installed by the playbook + `mise install` + `mise run setup`
