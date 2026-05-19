@@ -37,6 +37,13 @@ Anything reported as "modified" or "unpushed" needs to be committed + pushed bef
 
 If there's nothing surprising, proceed.
 
+### When to destroy the old VPS
+
+Two safe options:
+
+- **Destroy now** (cheaper, no safety net): follow [hetzner.md §5 → Destroying a VPS](hetzner.md#5-create-a-vps) before step 1. Then step 1 creates the new box on a clean slate.
+- **Destroy after verification** (recommended for first-time rebuilds): keep the old box running through steps 1–7. Once the new box is fully working + phone-driveable, destroy the old one in §8 Cleanup. The overlap costs ~3 cents (Hetzner bills hourly, prorated). If the new box turns out broken, you can ssh back into the old one.
+
 ## 1. Create the VPS
 
 Follow [hetzner.md §5 → Create a VPS](hetzner.md#5-create-a-vps). Copy the IPv4 address when it's running — step 2 needs it.
@@ -198,6 +205,10 @@ For Expo Go testing (mobile apps): see [mobile.md](mobile.md) step 3.
 
 ## 8. Cleanup
 
+### The old VPS (rebuilds only)
+
+If you kept the old VPS running through verification (per §0 → "When to destroy the old VPS"), destroy it now that the new box works: [hetzner.md §5 → Destroying a VPS](hetzner.md#5-create-a-vps). Billing stops at the second of deletion — leaving it running costs €6.49/mo for a ghost box.
+
 ### Tailscale admin
 
 https://login.tailscale.com/admin/machines → if the old VPS's node still shows (with the old IP, "expired"), delete it.
@@ -206,7 +217,7 @@ https://login.tailscale.com/admin/machines → if the old VPS's node still shows
 
 No action needed — the `github-identity` role uses a persistent key, so GitHub's SSH keys list doesn't accumulate stale entries on each rebuild.
 
-### Hetzner
+### Hetzner snapshots
 
 If you took a snapshot before destruction (for insurance), delete it now that the new VPS works: Console → Snapshots → ⋮ → Delete.
 
