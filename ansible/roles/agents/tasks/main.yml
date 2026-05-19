@@ -2,10 +2,14 @@
 # Deploy AGENTS.md + cross-agent skills (see ../../../agents/README.md).
 #
 # Strategy:
-#   1. rsync devbox/agents/ → ~/.agents/ on the VPS (canonical location)
+#   1. symlink ~/.agents/{AGENTS.md,README.md,skills} → ~/code/devbox/agents/
+#      (so edits to the devbox checkout are live with no apply step)
 #   2. symlink ~/.claude/CLAUDE.md and ~/.codex/AGENTS.md → ~/.agents/AGENTS.md
 #   3. symlink ~/.claude/skills and ~/.codex/skills → ~/.agents/skills
 #   4. install the 30-min `wt prune` cron entry for worktree cleanup
+#
+# Precondition: ~/code/devbox/ is checked out (the playbook itself runs from
+# inside it, so this always holds when ansible executes).
 
 - name: Ensure agent home dirs exist
   file:
@@ -19,13 +23,18 @@
     - "/home/{{ devbox_user }}/.codex"
     - "/home/{{ devbox_user }}/.agents"
 
-- name: Sync agents/ source → ~/.agents/
-  copy:
-    src: "{{ playbook_dir }}/../agents/"
-    dest: "/home/{{ devbox_user }}/.agents/"
+- name: Symlink ~/.agents/{{ item }} → devbox source
+  file:
+    src: "/home/{{ devbox_user }}/code/devbox/agents/{{ item }}"
+    dest: "/home/{{ devbox_user }}/.agents/{{ item }}"
+    state: link
+    force: true
     owner: "{{ devbox_user }}"
     group: "{{ devbox_user }}"
-    mode: preserve
+  loop:
+    - AGENTS.md
+    - README.md
+    - skills
 
 - name: Symlink ~/.claude/CLAUDE.md → ~/.agents/AGENTS.md
   file:
