@@ -83,14 +83,16 @@ cmd_squad() {
     repo_root=$(git rev-parse --show-toplevel)
     wt_path="${repo_root}-${task}"
 
-    # Spawn a new zellij tab with `claude` running in the worktree.
-    # Inline KDL layout via tempfile; bash -ic so mise activates on entry.
+    # Spawn a new zellij tab with `claude --remote-control` running in the
+    # worktree. The --remote-control flag explicitly registers the session
+    # with the named remote-control bridge so it surfaces in the phone's
+    # Claude app session list right away. bash -ic so mise activates first.
     layout_tmp=$(mktemp --suffix=.kdl)
-    cat > "$layout_tmp" <<'EOF'
+    cat > "$layout_tmp" <<EOF
 layout {
     pane {
         command "bash"
-        args "-ic" "claude"
+        args "-ic" "claude --remote-control '${task}'"
     }
 }
 EOF
