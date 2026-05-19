@@ -3,8 +3,9 @@
 #   ansible/secrets/github-fum4.age   → ~/.ssh/github-fum4              (SSH key)
 #   ansible/secrets/github-pat.age    → gh auth login --with-token     (CLI token)
 #
-# Both secrets are decrypted on the CONTROLLER (your laptop) using ~/.age/key.txt
-# and pushed to the VPS over SSH. The VPS never sees the age private key.
+# Both secrets are decrypted on the CONTROLLER (your laptop) using
+# devbox/secrets.local (the age private key, gitignored via *.local) and
+# pushed to the VPS over SSH. The VPS never sees the age private key.
 #
 # See docs/github.md for the bootstrap procedure (one-time, on the laptop).
 # If the .age files are missing, the role skips with a helpful notice — useful
@@ -43,7 +44,7 @@
   when: gh_ssh_secret.stat.exists
 
 - name: Decrypt GitHub SSH key on the controller
-  command: age -d -i {{ lookup('env', 'HOME') }}/.age/key.txt {{ playbook_dir }}/secrets/github-fum4.age
+  command: age -d -i {{ playbook_dir }}/../secrets.local {{ playbook_dir }}/secrets/github-fum4.age
   register: gh_ssh_key
   delegate_to: localhost
   become: false
@@ -58,6 +59,26 @@
     owner: "{{ devbox_user }}"
     group: "{{ devbox_user }}"
     mode: "0600"
+  no_log: true
+  when: gh_ssh_secret.stat.exists
+
+# OpenSSH reads the .pub file (if present) to know what public key to offer.
+# A stale .pub from prior auth offers the wrong key → "Permission denied".
+# Always derive .pub from the just-installed private to keep them in sync.
+- name: Derive matching .pub from the installed private key
+  command: ssh-keygen -y -f /home/{{ devbox_user }}/.ssh/github-fum4
+  register: gh_pub
+  changed_when: false
+  no_log: true
+  when: gh_ssh_secret.stat.exists
+
+- name: Write the matching .pub file
+  copy:
+    content: "{{ gh_pub.stdout }}\n"
+    dest: "/home/{{ devbox_user }}/.ssh/github-fum4.pub"
+    owner: "{{ devbox_user }}"
+    group: "{{ devbox_user }}"
+    mode: "0644"
   no_log: true
   when: gh_ssh_secret.stat.exists
 
@@ -87,7 +108,7 @@
   failed_when: false   # ssh-keyscan can flake on the controller; best-effort
 
 - name: Decrypt GitHub PAT on the controller
-  command: age -d -i {{ lookup('env', 'HOME') }}/.age/key.txt {{ playbook_dir }}/secrets/github-pat.age
+  command: age -d -i {{ playbook_dir }}/../secrets.local {{ playbook_dir }}/secrets/github-pat.age
   register: gh_pat
   delegate_to: localhost
   become: false

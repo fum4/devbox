@@ -14,3 +14,6 @@ ansible/secrets/*
 # Local OS noise
 .DS_Store
 Thumbs.db
+
+# Anything *.local is gitignored — local-only files (e.g. secrets.local holds the age private key)
+*.local

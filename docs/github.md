@@ -18,7 +18,7 @@ That's ~3 min of friction every rebuild. With this set up, all three steps disap
 LAPTOP                                          VPS
 ──────                                          ───
 
-~/.age/key.txt   (age private key)
+devbox/secrets.local   (age private key)
                   ──┐
                     │ decrypts at playbook runtime
                     ▼
@@ -28,13 +28,13 @@ devbox/ansible/secrets/
                                                        writes ~/.config/gh/hosts.yml
 ```
 
-- The **age private key** (`~/.age/key.txt`) lives only on your laptop. Back it up to a password manager.
+- The **age private key** (`devbox/secrets.local`) lives only on your laptop. Back it up to a password manager.
 - The **encrypted secrets** are safe to commit to the devbox repo.
 - The **decrypted plaintext** never leaves the controller — Ansible decrypts in memory and pushes the bytes directly to the VPS over SSH.
 
 ## Trust model
 
-- Anyone who steals `~/.age/key.txt` from your laptop can decrypt the secrets in the repo. Treat it like an SSH private key — never email, never paste, never share.
+- Anyone who steals `devbox/secrets.local` from your laptop can decrypt the secrets in the repo. Treat it like an SSH private key — never email, never paste, never share.
 - Anyone who steals the VPS's `~/.ssh/github-fum4` can push code as you to GitHub. Mitigated by GitHub instant key revocation + `wt`'s `--force-with-lease` keeping accidental damage bounded.
 - The PAT scopes are limited (`repo` + `read:org` + `workflow`) — wide enough for normal git ops, narrow enough that compromise is recoverable by rotation.
 
@@ -50,9 +50,12 @@ brew install age
 
 ### 2. Generate the age keypair
 
+The private key lives at `devbox/secrets.local` (gitignored via `*.local`). Sits alongside the encrypted `.age` files in `ansible/secrets/` but separated from them — committed: encrypted; uncommitted: the key.
+
 ```bash
-mkdir -p ~/.age && chmod 700 ~/.age
-age-keygen -o ~/.age/key.txt
+cd ~/_work/devbox
+age-keygen -o secrets.local
+chmod 600 secrets.local
 ```
 
 This writes the private key + a public-key comment line at the top of the file:
@@ -65,7 +68,7 @@ AGE-SECRET-KEY-1xxxxxxxxxxxxxxxxxxxxxxxx
 
 **Copy the public key** (the `age1...` string) — you'll use it as the encryption recipient.
 
-**Back up `~/.age/key.txt`** to your password manager (1Password, Bitwarden, etc.) RIGHT NOW. If you lose this key, you cannot decrypt the secrets in the repo, and you'll have to re-bootstrap from scratch (regenerate keys + tokens + re-encrypt + revoke the old ones on GitHub).
+**Back up `devbox/secrets.local`** to your password manager (1Password, Bitwarden, etc.) RIGHT NOW. If you lose this key, you cannot decrypt the secrets in the repo, and you'll have to re-bootstrap from scratch (regenerate keys + tokens + re-encrypt + revoke the old ones on GitHub).
 
 ### 3. Generate the GitHub SSH key
 
@@ -134,7 +137,7 @@ Bootstrap done. The repo now contains the encrypted identity. Every future devbo
 The `github-identity` Ansible role runs as part of `site.yml`, after `dotfiles` and before `repos`. On every provision, it:
 
 1. Checks that both `.age` files exist (skips with a notice if not — useful for the first provision before you've bootstrapped)
-2. Decrypts each on the laptop using `~/.age/key.txt`
+2. Decrypts each on the laptop using `devbox/secrets.local`
 3. Writes the SSH key to `~/.ssh/github-fum4` (mode 0600)
 4. Adds a `Host github.com` block to `~/.ssh/config` (via Ansible's `blockinfile` with a managed marker — re-runs are idempotent)
 5. Adds GitHub's host key to `~/.ssh/known_hosts` (no first-clone prompt)
@@ -211,9 +214,9 @@ ansible-playbook -i inventory.ini ansible/site.yml --tags github-identity
 
 ### Age key rotation (only if compromised — catastrophic)
 
-If `~/.age/key.txt` is ever exposed, you need to re-bootstrap *everything*:
+If `devbox/secrets.local` is ever exposed, you need to re-bootstrap *everything*:
 
-1. Generate a new age keypair (`age-keygen` again, overwriting `~/.age/key.txt`)
+1. Generate a new age keypair (`age-keygen` again, overwriting `devbox/secrets.local`)
 2. Treat the existing `.age` files in the repo as compromised — generate fresh SSH key + PAT
 3. Encrypt them with the **new** age recipient
 4. Replace both `.age` files in the repo
@@ -226,7 +229,7 @@ If `~/.age/key.txt` is ever exposed, you need to re-bootstrap *everything*:
 
 ### "age: no identity matched any recipient"
 
-The `.age` file in the repo was encrypted to a different age public key than the one in `~/.age/key.txt`. Either:
+The `.age` file in the repo was encrypted to a different age public key than the one in `devbox/secrets.local`. Either:
 
 - Wrong age key on this machine — restore the right one from your password manager.
 - The repo's `.age` files were re-encrypted by someone else. Coordinate with them or re-bootstrap.
