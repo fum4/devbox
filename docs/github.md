@@ -2,6 +2,8 @@
 
 This document covers the **persistent GitHub identity** used by the devbox: a long-lived SSH key + a personal access token (PAT), both stored age-encrypted in this repo and decrypted by Ansible during provision. The goal: **eliminate the interactive `gh auth login` browser flow on every VPS rebuild.**
 
+> Sister docs: [`laptop.md`](laptop.md) (the controller side this depends on), [`rebuild.md`](rebuild.md) (when this role runs during provisioning), [`recovery.md`](recovery.md) (what to do when it breaks).
+
 ## Why
 
 Without this, every fresh provision requires:
@@ -139,9 +141,10 @@ The `github-identity` Ansible role runs as part of `site.yml`, after `dotfiles` 
 1. Checks that both `.age` files exist (skips with a notice if not — useful for the first provision before you've bootstrapped)
 2. Decrypts each on the laptop using `devbox/secrets.local`
 3. Writes the SSH key to `~/.ssh/github-fum4` (mode 0600)
-4. Adds a `Host github.com` block to `~/.ssh/config` (via Ansible's `blockinfile` with a managed marker — re-runs are idempotent)
-5. Adds GitHub's host key to `~/.ssh/known_hosts` (no first-clone prompt)
-6. Pipes the PAT into `gh auth login --with-token` (skipped if gh is already authed)
+4. **Regenerates a matching `.pub` file** from the just-installed private (avoids OpenSSH offering a stale public key from any prior `gh auth login`)
+5. Adds a `Host github.com` block to `~/.ssh/config` (via Ansible's `blockinfile` with a managed marker — re-runs are idempotent)
+6. Adds GitHub's host key to `~/.ssh/known_hosts` (no first-clone prompt)
+7. Pipes the PAT into `gh auth login --with-token` (skipped if gh is already authed)
 
 After it runs:
 
@@ -248,8 +251,18 @@ The PAT was likely rejected. Causes:
 
 ### `ssh -T git@github.com` fails with `Permission denied (publickey)`
 
-- The SSH public key in the repo's `.age` doesn't match what's on github.com/settings/keys. Re-upload the public half.
-- Or: the SSH key on the VPS has wrong permissions (must be 0600). The role sets this; if you've manually edited the file, re-run `--tags github-identity`.
+In likelihood order:
+
+- **Stale `.pub` on the VPS** — OpenSSH advertises the public key from `~/.ssh/github-fum4.pub` (next to the private). If a previous `gh auth login` left a different `.pub`, you'll offer the wrong key. The `github-identity` role regenerates the `.pub` from the just-installed private to prevent this — re-run with `--tags github-identity`. Or manually: `ssh devbox 'ssh-keygen -y -f ~/.ssh/github-fum4 > ~/.ssh/github-fum4.pub'`.
+- **The SSH public key in the repo's `.age` doesn't match what's on github.com/settings/keys.** Verify with:
+  ```bash
+  age -d -i devbox/secrets.local ansible/secrets/github-fum4.age > /tmp/k
+  chmod 600 /tmp/k && ssh-keygen -y -f /tmp/k > /tmp/k.pub
+  ssh-keygen -lf /tmp/k.pub
+  shred -u /tmp/k /tmp/k.pub
+  ```
+  Compare the fingerprint to https://github.com/settings/keys → `devbox` entry. If they differ, the key in the repo isn't what's registered — either re-upload from your stored copy, or rotate per [Rotation](#ssh-key-rotation-on-compromise-or-by-choice).
+- **Permissions on the VPS** — must be 0600. The role sets this; if you've manually edited the file, re-run `--tags github-identity`.
 
 ### "Could not resolve hostname github.com"
 

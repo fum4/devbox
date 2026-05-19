@@ -32,10 +32,18 @@ devbox/
 │       ├── executable_zj                workspace launcher (Zellij sessions)
 │       ├── executable_wt                worktree + PR + merge wrapper
 │       └── executable_devbox-scaffold   scaffolds .mise.toml + zellij.kdl for a new repo
+├── docs/                end-to-end setup + recovery guides — see docs/README.md
+│   ├── laptop.md        fresh mac bootstrap (brew, age, ssh keys, clone)
+│   ├── hetzner.md       account, payment, project, SSH key upload
+│   ├── tailscale.md     account, MagicDNS, auth keys
+│   ├── github.md        age-encrypted GitHub identity (SSH key + PAT)
+│   ├── mobile.md        phone-side apps (Tailscale, Claude, Expo Go)
+│   ├── rebuild.md       the provisioning runbook (every fresh VPS)
+│   └── recovery.md      incident response — when something breaks
 └── repos.txt            repos cloned on every fresh provision (kost, devbox, …)
 ```
 
-Each subdirectory has its own README. **Read top to bottom**: start here, then `ansible/README.md` (provisioning), `chezmoi/README.md` (dotfiles), and `agents/README.md` (agent instructions + skills).
+Each subdirectory has its own README. **Read top to bottom**: start here, then `docs/README.md` (setup + recovery), `ansible/README.md` (provisioning internals), `chezmoi/README.md` (dotfiles), and `agents/README.md` (agent instructions + skills).
 
 ## The architecture in one diagram
 
