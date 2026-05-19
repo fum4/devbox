@@ -10,7 +10,7 @@ You're on a new machine and need to restore everything.
 
 1. **Set up the laptop from scratch** per [laptop.md](laptop.md) — Homebrew, age, ansible, gh, generate new SSH keys, clone the devbox repo.
 2. **Register the new laptop's GitHub key** on https://github.com/settings/keys (same fum4 account as the old laptop).
-3. **Restore `secrets.local`** from your password manager → place at `~/_work/devbox/secrets.local`, chmod 600.
+3. **Restore `secrets.local`** from your password manager — see [`secrets.md`](secrets.md) → "Restoring on a new laptop" for the verification loop.
 4. **Update Hetzner** with the new laptop's `id_ed25519_devbox_hetzner.pub` → Hetzner Console → Security → SSH Keys → Add (or replace the old `laptop` entry).
 5. **Update the existing VPS's `~/.ssh/authorized_keys`** so the new laptop can ssh in:
    - From any device that already has access (e.g. another laptop, or via the Hetzner Console *Rescue* mode):

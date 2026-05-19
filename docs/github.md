@@ -2,7 +2,7 @@
 
 This document covers the **persistent GitHub identity** used by the devbox: a long-lived SSH key + a personal access token (PAT), both stored age-encrypted in this repo and decrypted by Ansible during provision. The goal: **eliminate the interactive `gh auth login` browser flow on every VPS rebuild.**
 
-> Sister docs: [`laptop.md`](laptop.md) (the controller side this depends on), [`provisioning.md`](provisioning.md) (when this role runs during provisioning), [`recovery.md`](recovery.md) (what to do when it breaks).
+> Sister docs: [`laptop.md`](laptop.md) (the controller side this depends on), [`secrets.md`](secrets.md) (the encryption pattern used here), [`provisioning.md`](provisioning.md) (when this role runs during provisioning), [`recovery.md`](recovery.md) (what to do when it breaks).
 
 ## Why
 

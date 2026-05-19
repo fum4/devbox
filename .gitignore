@@ -10,6 +10,7 @@ ansible/.vault_pass
 ansible/secrets/*
 !ansible/secrets/.gitkeep
 !ansible/secrets/*.age
+!ansible/secrets/README.md
 
 # Local OS noise
 .DS_Store

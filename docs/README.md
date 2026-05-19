@@ -15,6 +15,8 @@ Everything you need to set up the devbox from scratch — laptop, Hetzner, Tails
 
 About 90 minutes start-to-finish if nothing snags. **Step 3 before step 4** — Tailscale's OAuth bootstrap encrypts a secret using the age recipient that github.md generates.
 
+For the cross-cutting "how do encrypted secrets work in this repo" reference, see [`secrets.md`](secrets.md). Steps 3 and 4 both use the pattern described there.
+
 ### Lost laptop, accounts and secrets still intact
 
 1. [`laptop.md`](laptop.md) — sets up the new laptop, restores `secrets.local` from password manager
@@ -39,6 +41,7 @@ Not a docs flow — use the `clone-repo` skill on the devbox itself. Either tell
 | [`laptop.md`](laptop.md) | Fresh / replaced Mac | Laptop ready to run `ansible-playbook` |
 | [`hetzner.md`](hetzner.md) | First-time Hetzner user | Account + project + SSH key uploaded |
 | [`tailscale.md`](tailscale.md) | First-time Tailscale user | Tailnet up, MagicDNS on, laptop + phone connected, OAuth client bootstrapped for unattended provisioning |
+| [`secrets.md`](secrets.md) | Anyone touching `ansible/secrets/`, anyone restoring on a new laptop | Understanding of the encryption pattern + new-laptop restore recipe + how to add new secrets |
 | [`github.md`](github.md) | First-time, or rotating secrets | Age-encrypted SSH key + PAT in the repo, public key registered on GitHub |
 | [`provisioning.md`](provisioning.md) | Every VPS provision | Fully configured VPS, agents driveable from phone |
 | [`mobile.md`](mobile.md) | New phone, or after reinstall | Tailscale + Claude + Expo Go ready |

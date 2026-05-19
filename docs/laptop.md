@@ -135,30 +135,22 @@ If `git clone` fails with "Permission denied (publickey)" → step 5 (GitHub key
 
 ## 8. Restore `secrets.local` from your password manager
 
-This is the **age private key** that decrypts everything in `ansible/secrets/*.age`. If you don't have a password-manager entry for it, you'll have to re-bootstrap the GitHub identity per [github.md](github.md) → "Recovery from total loss."
+`secrets.local` is the **age private key** that decrypts everything in `ansible/secrets/*.age`. See [`secrets.md`](secrets.md) for the full pattern + threat model.
 
-Assuming you do have it backed up:
+Quick path (full instructions in [`secrets.md`](secrets.md) → "Restoring on a new laptop"):
 
-1. Open your password manager → find the entry titled something like *"devbox age private key"*.
-2. Copy the entire content — it should look like:
-   ```
-   # created: ...
-   # public key: age1xxxxx...
-   AGE-SECRET-KEY-1xxxxxxxxxxx
-   ```
-3. On the laptop:
-   ```bash
-   cd ~/_work/devbox
-   pbpaste > secrets.local
-   chmod 600 secrets.local
-   ```
-4. Verify:
-   ```bash
-   age -d -i secrets.local ansible/secrets/github-pat.age | head -c 8
-   # Expected: ghp_xxxx (a PAT prefix)
-   ```
+```bash
+cd ~/_work/devbox
+pbpaste > secrets.local   # paste the contents from your password manager
+chmod 600 secrets.local
 
-If decryption fails ("no identity matched any recipient"), the age key in your password manager doesn't match the one used to encrypt these secrets. You need to re-bootstrap — see [github.md](github.md).
+# Verify all three secrets decrypt
+for f in ansible/secrets/*.age; do
+  printf '%-40s ' "$f:" && age -d -i secrets.local "$f" 2>&1 | head -c 12 && echo
+done
+```
+
+If any file fails with `no identity matched any recipient`, the restored key doesn't match. See [`secrets.md`](secrets.md) → "Restoring on a new laptop" for the troubleshooting fork. If you have no password-manager backup at all, you're in the catastrophic case — see [`github.md`](github.md) → "Recovery from total loss."
 
 ## 9. Sanity check
 

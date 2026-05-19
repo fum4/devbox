@@ -142,16 +142,7 @@ Then add it to `site.yml`:
 
 ### Add a secret
 
-`ansible/secrets/` is gitignored except `*.age` files. Workflow:
-
-```bash
-echo "my-secret" > secrets/foo.txt
-age -e -r <your-pubkey> secrets/foo.txt > secrets/foo.age
-rm secrets/foo.txt
-# Commit foo.age (encrypted)
-```
-
-In a role, decrypt at runtime via `lookup('pipe', 'age -d -i <keyfile> secrets/foo.age')` or via `community.sops` if you switch to sops.
+The age-encryption pattern (threat model, encrypt/decrypt recipes, the four-directive Ansible template, new-laptop recovery) is fully documented in [`../docs/secrets.md`](../docs/secrets.md). Read that doc before adding new secrets — it's the authoritative reference.
 
 Three secrets currently live this way:
 
