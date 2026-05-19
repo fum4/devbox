@@ -28,7 +28,9 @@ devbox/
 └── chezmoi/             user-level dotfiles — see chezmoi/README.md
     ├── dot_bashrc
     ├── dot_config/zellij/config.kdl
-    └── dot_local/bin/executable_zj
+    └── dot_local/bin/
+        ├── executable_zj    workspace launcher (Zellij sessions)
+        └── executable_wt    worktree + PR + merge wrapper
 ```
 
 Each subdirectory has its own README. **Read top to bottom**: start here, then `ansible/README.md` (provisioning), `chezmoi/README.md` (dotfiles), and `agents/README.md` (agent instructions + skills).

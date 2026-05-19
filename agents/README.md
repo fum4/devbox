@@ -16,17 +16,17 @@ agents/
 
 ## How it materializes on the VPS
 
-The `agents` Ansible role symlinks `~/.agents/` straight into the devbox checkout, then symlinks each agent's expected paths at it:
+The `agents` Ansible role creates `~/.agents/` as the cross-agent home (per the Agent Skills open standard), with each entry symlinked into this directory; both Claude Code's and Codex's expected paths then symlink at `~/.agents/`:
 
 ```
-~/code/devbox/agents/        ← canonical source (this directory, checked out on the VPS)
+~/code/devbox/agents/                  ← canonical source (this directory, checked out on the VPS)
         ▲
-        │ symlinks
+        │ each entry below is a symlink into the source above
         │
-~/.agents/                   ← agent-facing location (Agent Skills open standard)
-├── AGENTS.md
-├── README.md
-└── skills/
+~/.agents/                             ← agent-facing location (Agent Skills open standard)
+├── AGENTS.md  →  ~/code/devbox/agents/AGENTS.md
+├── README.md  →  ~/code/devbox/agents/README.md
+└── skills     →  ~/code/devbox/agents/skills
 
 ~/.claude/CLAUDE.md  → ~/.agents/AGENTS.md
 ~/.claude/skills     → ~/.agents/skills
@@ -34,7 +34,7 @@ The `agents` Ansible role symlinks `~/.agents/` straight into the devbox checkou
 ~/.codex/skills      → ~/.agents/skills
 ```
 
-**One source of truth, live edits.** Editing a file under `~/code/devbox/agents/` *is* editing the deployed file — no rsync, no `chezmoi apply`, no ansible re-run. Both agents see the change on their next session.
+**One source of truth, live edits.** Editing a file under `~/code/devbox/agents/` *is* editing the deployed file — no copy step, no `chezmoi apply`, no ansible re-run. Both agents see the change on their next session.
 
 ## AGENTS.md vs skills — when to use which
 
@@ -70,18 +70,6 @@ Instructions / reference content here.
 ```
 
 The `description` is the most important field — both agents use it to decide whether to auto-load the skill for the current task. Lead with the trigger phrasing the user is likely to use.
-
-### Claude-specific frontmatter (Codex ignores)
-
-| Field | Effect |
-|---|---|
-| `disable-model-invocation: true` | Only the user can invoke via `/skill-name`; agent never auto-loads. Good for actions with side effects. |
-| `user-invocable: false` | Only the agent can invoke; hidden from `/` menu. Good for background reference. |
-| `allowed-tools: Bash(git *) Read` | Pre-approve tools while skill is active. |
-| `paths: "**/*.ts"` | Only auto-loads when working on files matching the glob. |
-| `context: fork` | Run in a forked subagent (clean context). |
-
-Codex equivalents live in `openai.yaml` alongside `SKILL.md`. We're not using it yet.
 
 ## Currently shipped
 

@@ -19,7 +19,7 @@ Each role does one concern. Roles run in the order in `site.yml`:
 | 9 | `process-compose` | Install the binary (no services configured yet) | Available for headless service stacks (DB/Redis) when needed |
 | 10 | `docker` | Install Docker Engine + Compose plugin | Local infra stacks (Postgres/Redis/MinIO for projects); per-repo `compose.yml` brings them up |
 | 11 | `ntfy` | Install the ntfy CLI binary | Installed dormant — no topics or systemd subscriptions wired up |
-| 12 | `agents` | Symlink `~/.agents/{AGENTS.md,skills}` into `~/code/devbox/agents/`; install the `wt prune` cron | Needs the user (base) and a checkout of this repo on the VPS |
+| 12 | `agents` | Symlink `~/.agents/{AGENTS.md,README.md,skills}` → `~/code/devbox/agents/`, then point `~/.claude/` + `~/.codex/` agent paths at `~/.agents/`; install the `wt prune` cron | Needs the user (base) and a checkout of this repo on the VPS |
 | 13 | `dotfiles` | Install chezmoi, `chezmoi init --apply --source=../chezmoi` | Last — needs the user, mise activated, all tools in place |
 
 ## Prerequisites

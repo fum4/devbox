@@ -31,7 +31,8 @@ chezmoi/
 │       └── config.kdl               → ~/.config/zellij/config.kdl
 └── dot_local/
     └── bin/
-        └── executable_zj            → ~/.local/bin/zj   (chmod +x)
+        ├── executable_zj            → ~/.local/bin/zj   (chmod +x)
+        └── executable_wt            → ~/.local/bin/wt   (chmod +x)
 ```
 
 ### `dot_bashrc`
@@ -71,10 +72,27 @@ zj kost        # attach to or create the kost workspace
 
 Strips ANSI codes from `zellij list-sessions` output before matching (defends against zellij's colored output breaking grep).
 
+### `dot_local/bin/executable_wt`
+
+The worktree + PR + merge wrapper. Used in place of raw `git worktree` / `gh pr` commands for the new-branch → review → merge lifecycle:
+
+```bash
+wt new <task>            # branch ../<repo>-<task> from origin/<default>
+wt pr [gh-args…]         # rebase + force-push-with-lease + gh pr create
+wt merge [strategy]      # merge PR (default --squash) + clean up worktree
+wt rm <task> [--force]   # remove a worktree (refuses unless PR is MERGED)
+wt list                  # list worktrees in the current repo
+wt prune                 # sweep merged-PR worktrees across ~/code/* (cron-friendly)
+wt help                  # full reference
+```
+
+The 30-min `wt prune` cron is installed by the `agents` Ansible role.
+
 ## Public API
 
-- The destination paths (`~/.bashrc`, `~/.config/zellij/config.kdl`, `~/.local/bin/zj`) are the public surface.
-- The `zj` command is intended to be the human-facing way to attach to a project workspace.
+- The destination paths (`~/.bashrc`, `~/.config/zellij/config.kdl`, `~/.local/bin/zj`, `~/.local/bin/wt`) are the public surface.
+- `zj` is the human/agent-facing way to attach to a project workspace.
+- `wt` is the human/agent-facing way to drive the worktree → PR → merge lifecycle.
 
 ## How to extend
 
