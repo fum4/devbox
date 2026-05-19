@@ -60,7 +60,7 @@ pbcopy < ~/.ssh/id_ed25519_devbox_hetzner.pub
 In Hetzner Console (inside the `dev` project) → sidebar → **Security** → **SSH Keys** tab → **Add SSH Key**:
 
 - **Public Key**: paste (Cmd+V)
-- **Name**: `laptop-vps` (or `laptop` — anything memorable)
+- **Name**: `devbox` (matches the rest of the naming pattern — server name, SSH alias, Tailscale machine. Any label works; this is just for your reference in the Hetzner UI. If you'll eventually add a *second* machine to this project, use `laptop-personal` / `laptop-work` style instead.)
 - **Add SSH Key**
 
 The key now shows in the list with its fingerprint. Every future VPS you create can tick this key during the create-server form, and you'll be able to `ssh root@<new-ip>` immediately.

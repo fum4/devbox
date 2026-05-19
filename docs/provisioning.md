@@ -37,7 +37,7 @@ Hetzner Console → your project → **Servers** → **Add Server**:
 | Image | Debian 12 |
 | Type | Shared vCPU → CX33 |
 | Networking | Public IPv4 + IPv6 (defaults) |
-| SSH Keys | ✓ `laptop-vps` (uploaded per [hetzner.md](hetzner.md)) |
+| SSH Keys | ✓ `devbox` (uploaded per [hetzner.md](hetzner.md)) |
 | Backups | off |
 | Name | `dev` (or whatever) |
 
