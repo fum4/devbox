@@ -30,18 +30,98 @@
   failed_when: false
   changed_when: false
 
-- name: Bring Tailscale up with auth key (only if not yet authenticated)
+# --- OAuth path (preferred): mint a fresh single-use auth key via API ---
+
+- name: Check for encrypted Tailscale OAuth secret
+  stat:
+    path: "{{ playbook_dir }}/secrets/tailscale-oauth.age"
+  register: ts_oauth_present
+  delegate_to: localhost
+  become: false
+
+- name: Decrypt Tailscale OAuth client secret on the controller
+  command: age -d -i {{ playbook_dir }}/../secrets.local {{ playbook_dir }}/secrets/tailscale-oauth.age
+  register: ts_oauth_secret
+  delegate_to: localhost
+  become: false
+  no_log: true
+  changed_when: false
+  when:
+    - ts_oauth_present.stat.exists
+    - ts_status.rc != 0 or 'Logged out' in ts_status.stdout
+
+- name: Exchange OAuth credentials for an access token
+  uri:
+    url: https://api.tailscale.com/api/v2/oauth/token
+    method: POST
+    body_format: form-urlencoded
+    body:
+      client_id: "{{ tailscale_oauth_client_id }}"
+      client_secret: "{{ ts_oauth_secret.stdout }}"
+    status_code: [200]
+  register: ts_token_response
+  delegate_to: localhost
+  become: false
+  no_log: true
+  when:
+    - ts_oauth_present.stat.exists
+    - ts_status.rc != 0 or 'Logged out' in ts_status.stdout
+
+- name: Mint a fresh single-use Tailscale auth key via API
+  uri:
+    url: https://api.tailscale.com/api/v2/tailnet/-/keys
+    method: POST
+    headers:
+      Authorization: "Bearer {{ ts_token_response.json.access_token }}"
+    body_format: json
+    body:
+      capabilities:
+        devices:
+          create:
+            reusable: false
+            ephemeral: false
+            preauthorized: true
+            tags:
+              - "tag:devbox"
+      expirySeconds: 600
+      description: "devbox-provision-{{ ansible_facts.date_time.iso8601_basic_short | default(ansible_facts.date_time.iso8601) }}"
+    status_code: [200]
+  register: ts_key_response
+  delegate_to: localhost
+  become: false
+  no_log: true
+  when:
+    - ts_oauth_present.stat.exists
+    - ts_status.rc != 0 or 'Logged out' in ts_status.stdout
+
+- name: Bring Tailscale up via OAuth-minted key
+  command: "tailscale up --ssh --authkey={{ ts_key_response.json.key }}"
+  no_log: true
+  when:
+    - ts_oauth_present.stat.exists
+    - ts_status.rc != 0 or 'Logged out' in ts_status.stdout
+
+# --- Env-var fallback (legacy / pre-bootstrap) ---
+
+- name: Bring Tailscale up via TAILSCALE_AUTHKEY env var (fallback)
   command: "tailscale up --ssh --authkey={{ tailscale_auth_key }}"
   when:
+    - not ts_oauth_present.stat.exists
     - tailscale_auth_key | length > 0
     - ts_status.rc != 0 or 'Logged out' in ts_status.stdout
 
-- name: Notice — Tailscale not yet authenticated and no auth key provided
+- name: Notice — neither OAuth secret nor TAILSCALE_AUTHKEY available
   debug:
     msg: |
-      Tailscale installed but not authenticated.
-      Run on the VPS: sudo tailscale up --ssh
-      Or re-run this playbook with TAILSCALE_AUTHKEY=tskey-... set.
+      Tailscale installed but not authenticated, and no credentials provided.
+      Either:
+        - Add the OAuth secret to ansible/secrets/tailscale-oauth.age
+          (see docs/tailscale.md → "OAuth client (zero-touch provisioning)")
+        - Or generate a one-shot key at
+          https://login.tailscale.com/admin/settings/keys and re-run:
+          TAILSCALE_AUTHKEY=tskey-... ansible-playbook -i inventory.ini site.yml
+        - Or run on the VPS directly: sudo tailscale up --ssh
   when:
+    - not ts_oauth_present.stat.exists
     - tailscale_auth_key | length == 0
     - ts_status.rc != 0 or 'Logged out' in ts_status.stdout

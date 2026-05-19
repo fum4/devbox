@@ -2,9 +2,21 @@
 # The non-root user that owns the dev environment.
 devbox_user: fum4
 
-# Tailscale: set via env var to avoid committing the auth key.
-# Get a one-shot pre-authorized key from https://login.tailscale.com/admin/settings/keys
-# Then: TAILSCALE_AUTHKEY=tskey-... ansible-playbook -i inventory.ini site.yml
+# Tailscale auth — two paths, role prefers OAuth when available:
+#
+# 1. OAuth (preferred, zero standing keys):
+#    - The client_id below is non-secret (analogous to a username).
+#    - The matching client_secret is age-encrypted at
+#      ansible/secrets/tailscale-oauth.age and decrypted at runtime.
+#    - The `tailscale` role exchanges these for an access token, then
+#      mints a fresh single-use auth key via the Tailscale API.
+#    - See docs/tailscale.md → "OAuth client (zero-touch provisioning)".
+tailscale_oauth_client_id: "kNW1WwJRHK11CNTRL"
+
+# 2. Env-var fallback (legacy / pre-bootstrap):
+#    - If the OAuth secret isn't in the repo yet, fall back to a
+#      manually-generated auth key passed via TAILSCALE_AUTHKEY.
+#    - Format: TAILSCALE_AUTHKEY=tskey-... ansible-playbook ...
 tailscale_auth_key: "{{ lookup('env', 'TAILSCALE_AUTHKEY') | default('', true) }}"
 
 # Node version to lock in via mise (per-project .mise.toml can override)
