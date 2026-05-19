@@ -1,8 +1,8 @@
 # Hetzner Cloud setup
 
-How to set up a Hetzner Cloud account so you can rent a VPS for the devbox. One-time per Hetzner account (rarely changes). For *creating individual VPSes*, see [provisioning.md](provisioning.md).
+Everything Hetzner-UI: account setup (one-time per account, sections 1–4) plus the per-rebuild create/destroy server flow (section 5). Provider-specific knowledge stays in this one file; the post-create configuration flow lives in [provisioning.md](provisioning.md).
 
-**End state**: Hetzner Cloud account with verified identity, payment method on file, a project named `dev`, your laptop's SSH public key uploaded under Security.
+**End state after sections 1–4**: account verified, payment on file, project `dev` exists, your laptop's SSH key (`devbox_vps.pub`) is uploaded under Security. From there, section 5 is what you run on every rebuild.
 
 ## Prerequisites
 
@@ -65,9 +65,27 @@ In Hetzner Console (inside the `dev` project) → sidebar → **Security** → *
 
 The key now shows in the list with its fingerprint. Every future VPS you create can tick this key during the create-server form, and you'll be able to `ssh root@<new-ip>` immediately.
 
-## 5. Don't create a VPS yet
+## 5. Create a VPS
 
-VPS creation is per-rebuild and lives in [provisioning.md](provisioning.md). Stopping here keeps "Hetzner account setup" cleanly separate from "rent a machine."
+This is the per-rebuild UI flow — same regardless of whether it's your first VPS or your Nth replacement. The output is a running Debian 12 box with your SSH key pre-installed; configuration happens via Ansible in [provisioning.md](provisioning.md).
+
+Hetzner Console → your project → **Servers** → **Add Server**:
+
+| Field | Value |
+|---|---|
+| Location | Helsinki (HEL1) |
+| Image | Debian 12 |
+| Type | Shared vCPU → CX33 |
+| Networking | Public IPv4 + IPv6 (defaults) |
+| SSH Keys | ✓ `devbox` (uploaded in step 4 above) |
+| Backups | off |
+| Name | `devbox` (becomes the hostname; consistent with the SSH alias + Tailscale machine name) |
+
+**Create & Buy now**. Wait ~30 sec for status to flip to **Running**. **Copy the IPv4 address** — you'll paste it into the inventory in [provisioning.md](provisioning.md) §2.
+
+### Destroying a VPS
+
+To replace one (rebuild flow): Hetzner Console → Servers → click the server → ⋮ → **Delete**. Confirms with the server name. Billing stops at the second of deletion. Snapshots taken beforehand persist (and cost ~€0.0119/GB/month) until deleted separately.
 
 ## Recurring costs
 

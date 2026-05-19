@@ -36,7 +36,7 @@ devbox/
 │   └── doctor           verify the laptop is provisioning-ready
 ├── docs/                end-to-end setup + recovery guides — see docs/README.md
 │   ├── laptop.md        fresh mac bootstrap (brew, age, ssh keys, clone)
-│   ├── hetzner.md       account, payment, project, SSH key upload
+│   ├── hetzner.md       account, payment, project, SSH key upload, server create/destroy
 │   ├── tailscale.md     account, MagicDNS, OAuth client (zero-touch provisioning)
 │   ├── github.md        age-encrypted GitHub identity (SSH key + PAT)
 │   ├── mobile.md        phone-side apps (Tailscale, Claude, Expo Go)

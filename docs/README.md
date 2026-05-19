@@ -7,7 +7,7 @@ Everything you need to set up the devbox from scratch — laptop, Hetzner, Tails
 ### Brand new everything (no laptop, no accounts, no devbox)
 
 1. [`laptop.md`](laptop.md) — Mac setup, install tools, SSH keys
-2. [`hetzner.md`](hetzner.md) — Hetzner Cloud account + project + SSH key
+2. [`hetzner.md`](hetzner.md) — Hetzner Cloud account + project + SSH key + every server-create/destroy in the UI
 3. [`github.md`](github.md) — Generate the **age keypair** (`secrets.local`) + bootstrap the age-encrypted GitHub identity
 4. [`tailscale.md`](tailscale.md) — Tailscale tenant, MagicDNS, OAuth client (reuses the age recipient from step 3)
 5. [`provisioning.md`](provisioning.md) — Provision the first VPS
@@ -39,7 +39,7 @@ Not a docs flow — use the `clone-repo` skill on the devbox itself. Either tell
 | Doc | Audience | What it produces |
 |---|---|---|
 | [`laptop.md`](laptop.md) | Fresh / replaced Mac | Laptop ready to run `ansible-playbook` |
-| [`hetzner.md`](hetzner.md) | First-time Hetzner user | Account + project + SSH key uploaded |
+| [`hetzner.md`](hetzner.md) | First-time Hetzner user; every server create/destroy | Account ready, server running with SSH key pre-installed |
 | [`tailscale.md`](tailscale.md) | First-time Tailscale user | Tailnet up, MagicDNS on, laptop + phone connected, OAuth client bootstrapped for unattended provisioning |
 | [`secrets.md`](secrets.md) | Anyone touching `ansible/secrets/`, anyone restoring on a new laptop | Understanding of the encryption pattern + new-laptop restore recipe + how to add new secrets |
 | [`github.md`](github.md) | First-time, or rotating secrets | Age-encrypted SSH key + PAT in the repo, public key registered on GitHub |

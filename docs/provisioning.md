@@ -27,21 +27,9 @@ Anything reported as "modified" or "unpushed" needs to be committed + pushed bef
 
 If there's nothing surprising, proceed.
 
-## 1. Create the VPS in Hetzner UI
+## 1. Create the VPS
 
-Hetzner Console → your project → **Servers** → **Add Server**:
-
-| Field | Value |
-|---|---|
-| Location | Helsinki (HEL1) |
-| Image | Debian 12 |
-| Type | Shared vCPU → CX33 |
-| Networking | Public IPv4 + IPv6 (defaults) |
-| SSH Keys | ✓ `devbox` (uploaded per [hetzner.md](hetzner.md)) |
-| Backups | off |
-| Name | `devbox` (becomes the hostname; consistent with the SSH alias + Tailscale machine name) |
-
-**Create & Buy now**. Wait ~30 sec for status to flip to **Running**. **Copy the IPv4 address.**
+Follow [hetzner.md §5 → Create a VPS](hetzner.md#5-create-a-vps). Copy the IPv4 address when it's running — step 2 needs it.
 
 ## 2. Update local config with the new IP
 
