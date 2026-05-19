@@ -31,6 +31,7 @@ wt — worktree + PR + merge helper for the devbox.
 
 USAGE
   wt new <task>           Branch a worktree from origin/<default> into ../<repo>-<task>
+  wt squad <task>         wt new + open a new zellij tab running `claude` in the worktree
   wt pr [gh-args…]        Rebase + force-push-with-lease + gh pr create
   wt merge [strategy]     Merge PR (default --squash, --delete-branch) + clean up worktree
   wt rm <task> [--force]  Remove a worktree. Refuses unless PR is MERGED (or --force).
@@ -66,6 +67,42 @@ cmd_new() {
     echo "Worktree: $wt_path"
     echo "Branch:   $task (from origin/$default)"
     echo "Next:     cd $wt_path"
+}
+
+cmd_squad() {
+    local task="${1:-}"
+    [[ -z "$task" ]] && die "usage: wt squad <task>"
+    is_in_repo || die "not inside a git repo"
+    [[ -z "${ZELLIJ:-}" ]] && die "not inside a zellij session — start one with 'zj <project>' first"
+    command -v zellij >/dev/null || die "zellij not on PATH"
+
+    # Create the worktree (same as 'wt new').
+    cmd_new "$task"
+
+    local repo_root wt_path layout_tmp
+    repo_root=$(git rev-parse --show-toplevel)
+    wt_path="${repo_root}-${task}"
+
+    # Spawn a new zellij tab with `claude` running in the worktree.
+    # Inline KDL layout via tempfile; bash -ic so mise activates on entry.
+    layout_tmp=$(mktemp --suffix=.kdl)
+    cat > "$layout_tmp" <<'EOF'
+layout {
+    pane {
+        command "bash"
+        args "-ic" "claude"
+    }
+}
+EOF
+
+    zellij action new-tab --name "$task" --cwd "$wt_path" --layout "$layout_tmp"
+
+    # zellij reads the layout synchronously; the 2s background unlink is paranoid cleanup.
+    ( sleep 2 && rm -f "$layout_tmp" ) &
+
+    echo
+    echo "Spawned claude in zellij tab '$task' (cwd: $wt_path)."
+    echo "Refresh your phone's Claude app — the new session will appear in the list."
 }
 
 cmd_pr() {
@@ -201,6 +238,7 @@ shift 2>/dev/null || true
 
 case "$cmd" in
     new)            cmd_new "$@" ;;
+    squad)          cmd_squad "$@" ;;
     pr)             cmd_pr "$@" ;;
     merge)          cmd_merge "$@" ;;
     rm)             cmd_rm "$@" ;;
