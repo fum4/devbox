@@ -1,6 +1,6 @@
 ---
 # Install the devbox's persistent GitHub identity from age-encrypted secrets:
-#   ansible/secrets/github-fum4.age   → ~/.ssh/github-fum4              (SSH key)
+#   ansible/secrets/github-ssh.age   → ~/.ssh/github-ssh              (SSH key)
 #   ansible/secrets/github-pat.age    → gh auth login --with-token     (CLI token)
 #
 # Both secrets are decrypted on the CONTROLLER (your laptop) using
@@ -13,7 +13,7 @@
 
 - name: Check for encrypted GitHub SSH key
   stat:
-    path: "{{ playbook_dir }}/secrets/github-fum4.age"
+    path: "{{ playbook_dir }}/secrets/github-ssh.age"
   register: gh_ssh_secret
   delegate_to: localhost
   become: false
@@ -44,7 +44,7 @@
   when: gh_ssh_secret.stat.exists
 
 - name: Decrypt GitHub SSH key on the controller
-  command: age -d -i {{ playbook_dir }}/../secrets.local {{ playbook_dir }}/secrets/github-fum4.age
+  command: age -d -i {{ playbook_dir }}/../secrets.local {{ playbook_dir }}/secrets/github-ssh.age
   register: gh_ssh_key
   delegate_to: localhost
   become: false
@@ -55,7 +55,7 @@
 - name: Install GitHub SSH key on the VPS
   copy:
     content: "{{ gh_ssh_key.stdout }}\n"
-    dest: "/home/{{ devbox_user }}/.ssh/github-fum4"
+    dest: "/home/{{ devbox_user }}/.ssh/github-ssh"
     owner: "{{ devbox_user }}"
     group: "{{ devbox_user }}"
     mode: "0600"
@@ -66,7 +66,7 @@
 # A stale .pub from prior auth offers the wrong key → "Permission denied".
 # Always derive .pub from the just-installed private to keep them in sync.
 - name: Derive matching .pub from the installed private key
-  command: ssh-keygen -y -f /home/{{ devbox_user }}/.ssh/github-fum4
+  command: ssh-keygen -y -f /home/{{ devbox_user }}/.ssh/github-ssh
   register: gh_pub
   changed_when: false
   no_log: true
@@ -75,7 +75,7 @@
 - name: Write the matching .pub file
   copy:
     content: "{{ gh_pub.stdout }}\n"
-    dest: "/home/{{ devbox_user }}/.ssh/github-fum4.pub"
+    dest: "/home/{{ devbox_user }}/.ssh/github-ssh.pub"
     owner: "{{ devbox_user }}"
     group: "{{ devbox_user }}"
     mode: "0644"
@@ -94,7 +94,7 @@
       Host github.com
         HostName github.com
         User git
-        IdentityFile ~/.ssh/github-fum4
+        IdentityFile ~/.ssh/github-ssh
         IdentitiesOnly yes
   when: gh_ssh_secret.stat.exists
 

@@ -47,15 +47,15 @@ You need two keys on this laptop:
 | Key file | Purpose | Comment to use |
 |---|---|---|
 | `~/.ssh/id_ed25519_github_fum4` | Laptop → GitHub (fum4 account) for push/pull from this machine | `fum4-laptop-github` |
-| `~/.ssh/id_ed25519_devbox_hetzner` | Laptop → Hetzner VPS for SSH-in / Ansible | `fum4-laptop-devbox` |
+| `~/.ssh/devbox_vps` | Laptop → devbox VPS for SSH-in / Ansible | `fum4-laptop-vps` |
 
-**Important**: these are *laptop-only* keys. The devbox VPS has *its own* GitHub identity (the persistent age-encrypted one in `ansible/secrets/github-fum4.age`). Don't conflate them.
+**Important**: these are *laptop-only* keys. The devbox VPS has *its own* GitHub identity (the persistent age-encrypted one in `ansible/secrets/github-ssh.age`). Don't conflate them.
 
 Generate both:
 
 ```bash
 ssh-keygen -t ed25519 -C "fum4-laptop-github"  -f ~/.ssh/id_ed25519_github_fum4   -N ""
-ssh-keygen -t ed25519 -C "fum4-laptop-devbox"  -f ~/.ssh/id_ed25519_devbox_hetzner -N ""
+ssh-keygen -t ed25519 -C "fum4-laptop-vps"     -f ~/.ssh/devbox_vps              -N ""
 ```
 
 (Add a passphrase if you want; leaving empty is fine for personal use as long as the laptop disk is FileVault-encrypted.)
@@ -77,7 +77,7 @@ Host github.com
 Host devbox
   HostName <fill-in-after-VPS-is-created>
   User fum4
-  IdentityFile ~/.ssh/id_ed25519_devbox_hetzner
+  IdentityFile ~/.ssh/devbox_vps
   IdentitiesOnly yes
 EOF
 chmod 600 ~/.ssh/config
@@ -117,7 +117,7 @@ ssh -T git@github.com
 This step happens when you set up the Hetzner project — see [hetzner.md](hetzner.md). On a brand-new account:
 
 ```bash
-pbcopy < ~/.ssh/id_ed25519_devbox_hetzner.pub
+pbcopy < ~/.ssh/devbox_vps.pub
 ```
 
 Then in Hetzner Console → your project → **Security** → **SSH Keys** → **Add SSH Key**, paste, name it `laptop`.

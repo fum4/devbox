@@ -64,14 +64,14 @@ vps ansible_host=<NEW_IPv4>
 
 [devbox:vars]
 ansible_user=root
-ansible_ssh_private_key_file=~/.ssh/id_ed25519_devbox_hetzner
+ansible_ssh_private_key_file=~/.ssh/devbox_vps
 ansible_ssh_common_args='-o StrictHostKeyChecking=accept-new'
 ```
 
 Smoke test:
 
 ```bash
-ssh -i ~/.ssh/id_ed25519_devbox_hetzner root@<NEW_IPv4> 'uname -a'
+ssh -i ~/.ssh/devbox_vps root@<NEW_IPv4> 'uname -a'
 # Expected: Linux ... Debian 12 ...
 ```
 

@@ -48,7 +48,7 @@ You've followed [`laptop.md`](laptop.md) up to step 8 — the repo is cloned but
    ```
    Expected output (something like):
    ```
-   ansible/secrets/github-fum4.age:        -----BEGIN OP
+   ansible/secrets/github-ssh.age:        -----BEGIN OP
    ansible/secrets/github-pat.age:         ghp_xxxxxxxx
    ansible/secrets/tailscale-oauth.age:    tskey-client
    ```
@@ -62,7 +62,7 @@ If all three decrypt cleanly, you're done — laptop is ready to run Ansible.
 
 | File | Plaintext | Consumed by | Plaintext reaches VPS? |
 |---|---|---|---|
-| `ansible/secrets/github-fum4.age` | OpenSSH ed25519 private key | `github-identity` role → `~/.ssh/github-fum4` on VPS | Yes (the VPS needs to use the key for git ops) |
+| `ansible/secrets/github-ssh.age` | OpenSSH ed25519 private key | `github-identity` role → `~/.ssh/github-ssh` on VPS | Yes (the VPS needs to use the key for git ops) |
 | `ansible/secrets/github-pat.age` | GitHub PAT (`ghp_…`) | `github-identity` role → piped into `gh auth login --with-token` | Yes (stored at `~/.config/gh/hosts.yml`) |
 | `ansible/secrets/tailscale-oauth.age` | Tailscale OAuth `client_secret` (`tskey-client-…`) | `tailscale` role → exchanged for an access token, used to mint a single-use auth key | **No** — only the minted key reaches the VPS |
 
@@ -131,7 +131,7 @@ age -d -i secrets.local ansible/secrets/github-pat.age | head -c 8
 # ghp_xxxx
 
 # Decrypt to a temp file and shred it after
-age -d -i secrets.local ansible/secrets/github-fum4.age > /tmp/k
+age -d -i secrets.local ansible/secrets/github-ssh.age > /tmp/k
 # ...use /tmp/k...
 shred -u /tmp/k 2>/dev/null || rm /tmp/k
 ```

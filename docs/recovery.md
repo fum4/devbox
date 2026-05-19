@@ -11,11 +11,11 @@ You're on a new machine and need to restore everything.
 1. **Set up the laptop from scratch** per [laptop.md](laptop.md) — Homebrew, age, ansible, gh, generate new SSH keys, clone the devbox repo.
 2. **Register the new laptop's GitHub key** on https://github.com/settings/keys (same fum4 account as the old laptop).
 3. **Restore `secrets.local`** from your password manager — see [`secrets.md`](secrets.md) → "Restoring on a new laptop" for the verification loop.
-4. **Update Hetzner** with the new laptop's `id_ed25519_devbox_hetzner.pub` → Hetzner Console → Security → SSH Keys → Add (or replace the old `laptop` entry).
+4. **Update Hetzner** with the new laptop's `devbox_vps.pub` → Hetzner Console → Security → SSH Keys → Add (or replace the old `laptop` entry).
 5. **Update the existing VPS's `~/.ssh/authorized_keys`** so the new laptop can ssh in:
    - From any device that already has access (e.g. another laptop, or via the Hetzner Console *Rescue* mode):
      ```bash
-     echo "$(cat /path/to/new-laptop-id_ed25519_devbox_hetzner.pub)" >> /home/fum4/.ssh/authorized_keys
+     echo "$(cat /path/to/new-laptop-devbox_vps.pub)" >> /home/fum4/.ssh/authorized_keys
      ```
    - If you have no way in: easier to rebuild the VPS — Hetzner UI → create a new one with the new laptop's key, then run the playbook.
 6. **Delete the old laptop's keys from GitHub + Hetzner** to revoke its access.
@@ -54,16 +54,16 @@ Nothing in the devbox is permanently lost — source code lives in git, all conf
 Causes ordered by likelihood:
 
 1. **Stale `.pub` file on the VPS** — OpenSSH offers whatever public key is alongside the private. If a previous `gh auth login` left a different `.pub`, OpenSSH offers the wrong key.
-   - Fix: `ssh devbox 'ssh-keygen -y -f ~/.ssh/github-fum4 > ~/.ssh/github-fum4.pub'`. Then re-run `ansible-playbook --tags github-identity` (the role does this idempotently).
+   - Fix: `ssh devbox 'ssh-keygen -y -f ~/.ssh/github-ssh > ~/.ssh/github-ssh.pub'`. Then re-run `ansible-playbook --tags github-identity` (the role does this idempotently).
 2. **Public key not registered on GitHub** — check https://github.com/settings/keys. The `devbox` entry's fingerprint should match:
    ```bash
-   age -d -i ~/_work/devbox/secrets.local ~/_work/devbox/ansible/secrets/github-fum4.age > /tmp/k
+   age -d -i ~/_work/devbox/secrets.local ~/_work/devbox/ansible/secrets/github-ssh.age > /tmp/k
    chmod 600 /tmp/k && ssh-keygen -y -f /tmp/k > /tmp/k.pub
    ssh-keygen -lf /tmp/k.pub
    shred -u /tmp/k /tmp/k.pub
    ```
    If GitHub's fingerprint doesn't match, re-upload the public key.
-3. **SSH config not pointing at the right key** — `cat ~/.ssh/config` should have a `Host github.com` block with `IdentityFile ~/.ssh/github-fum4`. The `github-identity` Ansible role manages this via `blockinfile`; re-run if missing.
+3. **SSH config not pointing at the right key** — `cat ~/.ssh/config` should have a `Host github.com` block with `IdentityFile ~/.ssh/github-ssh`. The `github-identity` Ansible role manages this via `blockinfile`; re-run if missing.
 
 ## `gh auth status` fails
 

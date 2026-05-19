@@ -25,7 +25,7 @@ devbox/secrets.local   (age private key)
                     │ decrypts at playbook runtime
                     ▼
 devbox/ansible/secrets/
-├── github-fum4.age   (encrypted SSH private key)  ──→ ~/.ssh/github-fum4         (0600)
+├── github-ssh.age   (encrypted SSH private key)  ──→ ~/.ssh/github-ssh         (0600)
 └── github-pat.age    (encrypted GitHub PAT)       ──→ gh auth login --with-token
                                                        writes ~/.config/gh/hosts.yml
 ```
@@ -37,7 +37,7 @@ devbox/ansible/secrets/
 ## Trust model
 
 - Anyone who steals `devbox/secrets.local` from your laptop can decrypt the secrets in the repo. Treat it like an SSH private key — never email, never paste, never share.
-- Anyone who steals the VPS's `~/.ssh/github-fum4` can push code as you to GitHub. Mitigated by GitHub instant key revocation + `wt`'s `--force-with-lease` keeping accidental damage bounded.
+- Anyone who steals the VPS's `~/.ssh/github-ssh` can push code as you to GitHub. Mitigated by GitHub instant key revocation + `wt`'s `--force-with-lease` keeping accidental damage bounded.
 - The PAT scopes are limited (`repo` + `read:org` + `workflow`) — wide enough for normal git ops, narrow enough that compromise is recoverable by rotation.
 
 ## One-time bootstrap (on your laptop)
@@ -75,7 +75,7 @@ AGE-SECRET-KEY-1xxxxxxxxxxxxxxxxxxxxxxxx
 ### 3. Generate the GitHub SSH key
 
 ```bash
-ssh-keygen -t ed25519 -C "fum4-devbox-identity" -f /tmp/github-fum4 -N ""
+ssh-keygen -t ed25519 -C "fum4-devbox-identity" -f /tmp/github-ssh -N ""
 ```
 
 This is a **long-lived** key that lives encrypted in the repo and is used by every devbox you'll ever provision. It is **distinct** from your laptop's GitHub keys.
@@ -87,7 +87,7 @@ Replace `<AGE_PUBKEY>` with the value from step 2:
 ```bash
 cd ~/_work/devbox
 mkdir -p ansible/secrets
-age -e -r <AGE_PUBKEY> -o ansible/secrets/github-fum4.age /tmp/github-fum4
+age -e -r <AGE_PUBKEY> -o ansible/secrets/github-ssh.age /tmp/github-ssh
 ```
 
 Commit later (after step 7).
@@ -95,7 +95,7 @@ Commit later (after step 7).
 ### 5. Register the SSH public key with GitHub
 
 ```bash
-pbcopy < /tmp/github-fum4.pub
+pbcopy < /tmp/github-ssh.pub
 ```
 
 Then https://github.com/settings/keys → **New SSH key** → title `devbox` → paste → Add.
@@ -123,11 +123,11 @@ age -e -r <AGE_PUBKEY> -o ansible/secrets/github-pat.age /tmp/gh-pat.txt
 ### 8. Clean up plaintext + commit
 
 ```bash
-shred -u /tmp/github-fum4 /tmp/github-fum4.pub /tmp/gh-pat.txt 2>/dev/null \
-    || rm /tmp/github-fum4 /tmp/github-fum4.pub /tmp/gh-pat.txt
+shred -u /tmp/github-ssh /tmp/github-ssh.pub /tmp/gh-pat.txt 2>/dev/null \
+    || rm /tmp/github-ssh /tmp/github-ssh.pub /tmp/gh-pat.txt
 
 cd ~/_work/devbox
-git add ansible/secrets/github-fum4.age ansible/secrets/github-pat.age
+git add ansible/secrets/github-ssh.age ansible/secrets/github-pat.age
 git commit -m "chore(secrets): add age-encrypted github identity"
 git push
 ```
@@ -140,7 +140,7 @@ The `github-identity` Ansible role runs as part of `site.yml`, after `dotfiles` 
 
 1. Checks that both `.age` files exist (skips with a notice if not — useful for the first provision before you've bootstrapped)
 2. Decrypts each on the laptop using `devbox/secrets.local`
-3. Writes the SSH key to `~/.ssh/github-fum4` (mode 0600)
+3. Writes the SSH key to `~/.ssh/github-ssh` (mode 0600)
 4. **Regenerates a matching `.pub` file** from the just-installed private (avoids OpenSSH offering a stale public key from any prior `gh auth login`)
 5. Adds a `Host github.com` block to `~/.ssh/config` (via Ansible's `blockinfile` with a managed marker — re-runs are idempotent)
 6. Adds GitHub's host key to `~/.ssh/known_hosts` (no first-clone prompt)
@@ -193,19 +193,19 @@ ansible-playbook -i inventory.ini site.yml --tags github-identity
 
 ```bash
 # 1. Generate a fresh key
-ssh-keygen -t ed25519 -C "fum4-devbox-identity" -f /tmp/github-fum4 -N ""
+ssh-keygen -t ed25519 -C "fum4-devbox-identity" -f /tmp/github-ssh -N ""
 
 # 2. Re-encrypt
-age -e -r <AGE_PUBKEY> -o ansible/secrets/github-fum4.age /tmp/github-fum4
+age -e -r <AGE_PUBKEY> -o ansible/secrets/github-ssh.age /tmp/github-ssh
 
 # 3. Upload the new public key to GitHub
-pbcopy < /tmp/github-fum4.pub
+pbcopy < /tmp/github-ssh.pub
 # → github.com/settings/keys → New SSH key → title `devbox` → paste → Add
 
 # 4. Clean + commit
-shred -u /tmp/github-fum4 /tmp/github-fum4.pub 2>/dev/null \
-    || rm /tmp/github-fum4 /tmp/github-fum4.pub
-git add ansible/secrets/github-fum4.age
+shred -u /tmp/github-ssh /tmp/github-ssh.pub 2>/dev/null \
+    || rm /tmp/github-ssh /tmp/github-ssh.pub
+git add ansible/secrets/github-ssh.age
 git commit -m "chore(secrets): rotate github ssh key"
 git push
 
@@ -253,10 +253,10 @@ The PAT was likely rejected. Causes:
 
 In likelihood order:
 
-- **Stale `.pub` on the VPS** — OpenSSH advertises the public key from `~/.ssh/github-fum4.pub` (next to the private). If a previous `gh auth login` left a different `.pub`, you'll offer the wrong key. The `github-identity` role regenerates the `.pub` from the just-installed private to prevent this — re-run with `--tags github-identity`. Or manually: `ssh devbox 'ssh-keygen -y -f ~/.ssh/github-fum4 > ~/.ssh/github-fum4.pub'`.
+- **Stale `.pub` on the VPS** — OpenSSH advertises the public key from `~/.ssh/github-ssh.pub` (next to the private). If a previous `gh auth login` left a different `.pub`, you'll offer the wrong key. The `github-identity` role regenerates the `.pub` from the just-installed private to prevent this — re-run with `--tags github-identity`. Or manually: `ssh devbox 'ssh-keygen -y -f ~/.ssh/github-ssh > ~/.ssh/github-ssh.pub'`.
 - **The SSH public key in the repo's `.age` doesn't match what's on github.com/settings/keys.** Verify with:
   ```bash
-  age -d -i devbox/secrets.local ansible/secrets/github-fum4.age > /tmp/k
+  age -d -i devbox/secrets.local ansible/secrets/github-ssh.age > /tmp/k
   chmod 600 /tmp/k && ssh-keygen -y -f /tmp/k > /tmp/k.pub
   ssh-keygen -lf /tmp/k.pub
   shred -u /tmp/k /tmp/k.pub

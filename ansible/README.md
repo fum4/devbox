@@ -31,7 +31,7 @@ Each role does one concern. Roles run in the order in `site.yml`:
 - **SSH access** to the VPS, key-based. Your `~/.ssh/config` should have a `Host devbox` entry pointing at the VPS's public IPv4 with the right private key. (The root README's "First-time setup" covers this.)
 - **`secrets.local`** at the repo root (the age private key, restored from your password manager). This decrypts:
   - `secrets/tailscale-oauth.age` — OAuth client_secret for unattended Tailscale auth (see [`docs/tailscale.md`](../docs/tailscale.md) §6 for the one-time bootstrap)
-  - `secrets/github-fum4.age` + `secrets/github-pat.age` — GitHub identity (see [`docs/github.md`](../docs/github.md))
+  - `secrets/github-ssh.age` + `secrets/github-pat.age` — GitHub identity (see [`docs/github.md`](../docs/github.md))
 - (legacy fallback) **`TAILSCALE_AUTHKEY` env var** — only used when `secrets/tailscale-oauth.age` doesn't exist yet. Generate a one-shot key at https://login.tailscale.com/admin/settings/keys.
 
 ## File layout
@@ -149,7 +149,7 @@ Three secrets currently live this way:
 | File | Decrypts to | Used by |
 |---|---|---|
 | `secrets/tailscale-oauth.age` | OAuth client_secret (`tskey-client-…`) | `tailscale` role — exchanges for an access token, mints a fresh single-use auth key per provision |
-| `secrets/github-fum4.age` | An SSH private key | `github-identity` role — installed at `~/.ssh/github-fum4` on the VPS |
+| `secrets/github-ssh.age` | An SSH private key | `github-identity` role — installed at `~/.ssh/github-ssh` on the VPS |
 | `secrets/github-pat.age` | A GitHub PAT (`ghp_…`) | `github-identity` role — fed to `gh auth login --with-token` |
 
 All three are decrypted **on the controller** (your laptop) via `delegate_to: localhost` and `no_log: true`. The plaintext never lands on disk on the VPS — it's pushed in over SSH and either piped into a command or written directly to the destination file in-memory.
@@ -167,7 +167,7 @@ staging ansible_host=49.13.y.y
 
 [devbox:vars]
 ansible_user=fum4
-ansible_ssh_private_key_file=~/.ssh/id_ed25519_devbox_hetzner
+ansible_ssh_private_key_file=~/.ssh/devbox_vps
 ```
 
 Run as before — Ansible applies to all hosts in the group. Use `-l <host>` to target one.

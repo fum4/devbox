@@ -6,7 +6,7 @@ How to set up a Hetzner Cloud account so you can rent a VPS for the devbox. One-
 
 ## Prerequisites
 
-- Laptop set up per [laptop.md](laptop.md) (you need the SSH public key at `~/.ssh/id_ed25519_devbox_hetzner.pub`)
+- Laptop set up per [laptop.md](laptop.md) (you need the SSH public key at `~/.ssh/devbox_vps.pub`)
 - A payment card (personal or company)
 - ID / passport image for identity verification
 
@@ -54,7 +54,7 @@ This is what lets your laptop log in to any VPS you create in this project.
 On the laptop:
 
 ```bash
-pbcopy < ~/.ssh/id_ed25519_devbox_hetzner.pub
+pbcopy < ~/.ssh/devbox_vps.pub
 ```
 
 In Hetzner Console (inside the `dev` project) → sidebar → **Security** → **SSH Keys** tab → **Add SSH Key**:

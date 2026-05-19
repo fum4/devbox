@@ -6,7 +6,7 @@ Age-encrypted secrets consumed by the Ansible playbook. The encryption pattern, 
 
 | File | Plaintext | Consumed by |
 |---|---|---|
-| `github-fum4.age` | OpenSSH ed25519 private key | `github-identity` role |
+| `github-ssh.age` | OpenSSH ed25519 private key | `github-identity` role |
 | `github-pat.age` | GitHub PAT (`ghp_…`) | `github-identity` role |
 | `tailscale-oauth.age` | Tailscale OAuth `client_secret` | `tailscale` role |
 
