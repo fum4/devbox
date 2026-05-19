@@ -1,23 +1,18 @@
 ---
-# ntfy CLI — installed via the official apt repo at archive.heckel.io.
+# ntfy CLI — installed via the latest .deb from GitHub releases.
+# (archive.heckel.io's apt repo started returning 404 around 2026-05; the
+# GitHub releases are the maintained distribution path.)
 # Installed dormant; no topics, subscriptions, or systemd services wired up.
 # To use: pick a random topic, `curl -d "msg" ntfy.sh/<topic>`, subscribe on phone.
 
-- name: Add ntfy apt key (dearmored)
-  shell: |
-    set -e
-    curl -fsSL https://archive.heckel.io/apt/pubkey.txt | gpg --dearmor -o /usr/share/keyrings/archive.heckel.io.gpg
-  args:
-    creates: /usr/share/keyrings/archive.heckel.io.gpg
+- name: Resolve latest ntfy release tag
+  ansible.builtin.uri:
+    url: https://api.github.com/repos/binwiederhier/ntfy/releases/latest
+    return_content: true
+  register: ntfy_release
+  changed_when: false
 
-- name: Add ntfy apt repo
-  apt_repository:
-    repo: "deb [arch=amd64,arm64 signed-by=/usr/share/keyrings/archive.heckel.io.gpg] https://archive.heckel.io/apt debian main"
-    state: present
-    filename: ntfy
-
-- name: Install ntfy
+- name: Install ntfy .deb
   apt:
-    name: ntfy
+    deb: "https://github.com/binwiederhier/ntfy/releases/download/{{ ntfy_release.json.tag_name }}/ntfy_{{ ntfy_release.json.tag_name | regex_replace('^v', '') }}_linux_amd64.deb"
     state: present
-    update_cache: true

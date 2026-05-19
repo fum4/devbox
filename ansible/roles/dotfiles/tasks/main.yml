@@ -1,14 +1,21 @@
 ---
-- name: Install chezmoi
+- name: Install chezmoi binary
   shell: |
     set -e
     sh -c "$(curl -fsLS get.chezmoi.io)" -- -b /usr/local/bin
   args:
     creates: /usr/local/bin/chezmoi
 
-- name: Initialize and apply chezmoi from this repo's chezmoi/ dir
-  command:
-    cmd: "chezmoi init --apply --source={{ playbook_dir }}/../chezmoi"
-  args:
-    creates: "/home/{{ devbox_user }}/.config/chezmoi/chezmoi.toml"
+- name: Sync chezmoi source → ~/.local/share/chezmoi/ (the default source dir)
+  copy:
+    src: "{{ playbook_dir }}/../chezmoi/"
+    dest: "/home/{{ devbox_user }}/.local/share/chezmoi/"
+    owner: "{{ devbox_user }}"
+    group: "{{ devbox_user }}"
+    mode: preserve
+  become: true
+
+- name: Apply chezmoi (idempotent; --force overwrites Debian-stock dotfiles)
+  command: chezmoi apply --force
   become_user: "{{ devbox_user }}"
+  changed_when: false
