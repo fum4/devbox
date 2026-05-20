@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+# devbox-doctor — verify the devbox is in a working state.
+#
+# Read-only. Mirrors bin/doctor (which is laptop-side) but checks the
+# box-side stuff: Tailscale, docker, mise activation, expected binaries
+# on PATH, symlink integrity for the agent layer, repo checkouts, cron
+# entries, free disk + memory.
+#
+# Exit 0 if everything passes, non-zero (= number of failures) otherwise.
+# Safe to run from cron / CI as a smoke test.
+
+set -u
+
+if [[ -t 1 ]]; then
+    GREEN=$'\e[32m'; RED=$'\e[31m'; YELLOW=$'\e[33m'; DIM=$'\e[2m'; RESET=$'\e[0m'
+else
+    GREEN=""; RED=""; YELLOW=""; DIM=""; RESET=""
+fi
+
+fails=0
+warns=0
+
+pass() { printf "  %s✓%s %s\n" "$GREEN" "$RESET" "$1"; }
+fail() { printf "  %s✗%s %s\n    %s→%s %s\n" "$RED" "$RESET" "$1" "$DIM" "$RESET" "$2"; fails=$((fails + 1)); }
+warn() { printf "  %s!%s %s\n    %s→%s %s\n" "$YELLOW" "$RESET" "$1" "$DIM" "$RESET" "$2"; warns=$((warns + 1)); }
+section() { printf "\n%s\n" "$1"; }
+
+check() {
+    local label="$1" cmd="$2" hint="$3"
+    if eval "$cmd" >/dev/null 2>&1; then
+        pass "$label"
+    else
+        fail "$label" "$hint"
+    fi
+}
+
+check_symlink() {
+    local label="$1" path="$2"
+    if [[ -L "$path" && -e "$path" ]]; then
+        pass "$label ($path → $(readlink "$path"))"
+    elif [[ -L "$path" ]]; then
+        fail "$label" "$path is a symlink but the target ($(readlink "$path")) doesn't exist"
+    else
+        fail "$label" "$path is not a symlink (was expected to be one)"
+    fi
+}
+
+section "Binaries on PATH"
+for bin in mise zellij claude cs gh rg fd jq age docker chezmoi tailscale wt zj devbox-reprov devbox-scaffold; do
+    check "$bin" "command -v $bin" "missing — re-run \`devbox-reprov\` to reinstall the relevant role"
+done
+
+section "Tailscale"
+check "tailscaled is running"      "systemctl is-active --quiet tailscaled"        "sudo systemctl start tailscaled"
+check "tailscale has a tailnet IP" "tailscale ip -4 | grep -Eq '^100\\.'"          "tailscale up (check docs/tailscale.md)"
+check "Tailscale SSH is enabled"   "tailscale debug prefs 2>/dev/null | grep -Eq '\"RunSSH\": *true'" \
+                                                                                   "re-run --tags tailscale; if ACL is the issue see docs/tailscale.md"
+
+section "Docker"
+check "docker daemon reachable as $USER" \
+      "docker info --format '{{.ServerVersion}}' >/dev/null" \
+      "sudo systemctl status docker; if you were just added to the 'docker' group, log out + back in (or 'newgrp docker') so the new group membership takes effect"
+
+section "Devbox repo checkout"
+DEVBOX_REPO="$HOME/code/devbox"
+if [[ -d "$DEVBOX_REPO/.git" ]]; then
+    pass "$DEVBOX_REPO is a git checkout"
+    if git -C "$DEVBOX_REPO" diff --quiet && git -C "$DEVBOX_REPO" diff --cached --quiet; then
+        pass "$DEVBOX_REPO has no uncommitted changes"
+    else
+        warn "$DEVBOX_REPO has uncommitted changes" "git -C $DEVBOX_REPO status"
+    fi
+    if [[ -n "$(git -C "$DEVBOX_REPO" log --oneline @{u}.. 2>/dev/null)" ]]; then
+        warn "$DEVBOX_REPO has unpushed commits" "git -C $DEVBOX_REPO push"
+    else
+        pass "$DEVBOX_REPO is in sync with origin"
+    fi
+else
+    fail "$DEVBOX_REPO is not a git checkout" "the \`repos\` role should clone it; re-run --tags repos"
+fi
+
+section "Agent-layer symlinks"
+check_symlink "~/.agents/AGENTS.md"      "$HOME/.agents/AGENTS.md"
+check_symlink "~/.agents/skills"         "$HOME/.agents/skills"
+check_symlink "~/.claude/CLAUDE.md"      "$HOME/.claude/CLAUDE.md"
+check_symlink "~/.claude/skills"         "$HOME/.claude/skills"
+check_symlink "~/.claude/settings.json"  "$HOME/.claude/settings.json"
+check_symlink "~/.codex/AGENTS.md"       "$HOME/.codex/AGENTS.md"
+check_symlink "~/.codex/skills"          "$HOME/.codex/skills"
+
+section "Cron"
+if crontab -l 2>/dev/null | grep -q 'wt prune'; then
+    pass "wt prune cron entry present"
+else
+    fail "wt prune cron entry missing" "re-run --tags agents"
+fi
+
+section "Resources"
+mem_free_mb=$(awk '/MemAvailable:/ { printf "%d", $2 / 1024 }' /proc/meminfo)
+if (( mem_free_mb > 1024 )); then
+    pass "memory available: ${mem_free_mb} MB"
+elif (( mem_free_mb > 512 )); then
+    warn "memory available: ${mem_free_mb} MB" "low headroom — consider stopping unused services"
+else
+    fail "memory available: ${mem_free_mb} MB" "critically low — investigate what's running"
+fi
+
+disk_free_gb=$(df -BG --output=avail / | tail -1 | tr -d ' G')
+if (( disk_free_gb > 5 )); then
+    pass "disk free on /: ${disk_free_gb} GB"
+elif (( disk_free_gb > 2 )); then
+    warn "disk free on /: ${disk_free_gb} GB" "consider cleaning docker volumes / old logs"
+else
+    fail "disk free on /: ${disk_free_gb} GB" "critically low — docker system prune, journalctl --vacuum-size"
+fi
+
+section "Summary"
+total=$((fails + warns))
+if (( fails == 0 && warns == 0 )); then
+    printf "  %sall checks passed%s\n" "$GREEN" "$RESET"
+elif (( fails == 0 )); then
+    printf "  %s%d warning(s)%s, 0 failures — non-critical issues, devbox is usable\n" "$YELLOW" "$warns" "$RESET"
+else
+    printf "  %s%d failure(s)%s, %d warning(s) — fix the failures above\n" "$RED" "$fails" "$RESET" "$warns"
+fi
+
+exit "$fails"

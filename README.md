@@ -34,7 +34,8 @@ devbox/
 │       ├── executable_zj                workspace launcher (Zellij sessions)
 │       ├── executable_wt                worktree + PR + merge wrapper
 │       ├── executable_devbox-scaffold   scaffolds .mise.toml + zellij.kdl for a new repo
-│       └── executable_devbox-reprov     re-run ansible site.yml locally on the VPS
+│       ├── executable_devbox-reprov     re-run ansible site.yml locally on the VPS
+│       └── executable_devbox-doctor     box-side health check (mirrors bin/doctor on the laptop)
 ├── bin/                 laptop-side utility scripts — see bin/README.md
 │   └── doctor           verify the laptop is provisioning-ready
 ├── docs/                end-to-end setup + recovery guides — see docs/README.md

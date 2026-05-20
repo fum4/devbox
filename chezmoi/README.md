@@ -37,7 +37,8 @@ chezmoi/
         ├── executable_zj                   → ~/.local/bin/zj                  (chmod +x)
         ├── executable_wt                   → ~/.local/bin/wt                  (chmod +x)
         ├── executable_devbox-scaffold      → ~/.local/bin/devbox-scaffold     (chmod +x)
-        └── executable_devbox-reprov        → ~/.local/bin/devbox-reprov       (chmod +x)
+        ├── executable_devbox-reprov        → ~/.local/bin/devbox-reprov       (chmod +x)
+        └── executable_devbox-doctor        → ~/.local/bin/devbox-doctor       (chmod +x)
 ```
 
 ### `dot_bashrc`
@@ -123,13 +124,32 @@ devbox-reprov --check --diff        # dry-run preview
 
 Needs Ansible installed locally (the `ansible-cli` role does this) and `~/code/devbox/` checked out (the `repos` role + `repos.txt`). First-time provision still has to come from the laptop.
 
+### `dot_local/bin/executable_devbox-doctor`
+
+Read-only health check for the VPS — mirrors the laptop-side `bin/doctor` but checks box-side state. Verifies:
+
+- Expected binaries on PATH (mise, zellij, claude, cs, gh, rg, fd, jq, age, docker, chezmoi, tailscale, wt, zj, devbox-reprov, devbox-scaffold)
+- Tailscale: daemon running, has tailnet IP, SSH enabled
+- Docker daemon reachable as the current user
+- `~/code/devbox/` is a clean git checkout, in sync with origin
+- All agent-layer symlinks resolve (`~/.agents/`, `~/.claude/*`, `~/.codex/*`, including `~/.claude/settings.json`)
+- `wt prune` cron entry present
+- Free memory + disk above thresholds
+
+Exit code = number of failures (0 = healthy). Safe to wire into cron / CI as a smoke test.
+
+```bash
+devbox-doctor
+```
+
 ## Public API
 
-- The destination paths (`~/.bashrc`, `~/.config/zellij/config.kdl`, `~/.local/bin/zj`, `~/.local/bin/wt`, `~/.local/bin/devbox-scaffold`, `~/.local/bin/devbox-reprov`) are the public surface.
+- The destination paths (`~/.bashrc`, `~/.config/zellij/config.kdl`, `~/.local/bin/zj`, `~/.local/bin/wt`, `~/.local/bin/devbox-scaffold`, `~/.local/bin/devbox-reprov`, `~/.local/bin/devbox-doctor`) are the public surface.
 - `zj` is the human/agent-facing way to attach to a project workspace.
 - `wt` is the human/agent-facing way to drive the worktree → PR → merge lifecycle.
 - `devbox-scaffold` is the human/agent-facing way to scaffold a new repo's dev contract (`.mise.toml` + `zellij.kdl`).
 - `devbox-reprov` is the human/agent-facing way to re-run the playbook locally on the VPS.
+- `devbox-doctor` is the read-only health check — runs in a few seconds, reports what's broken.
 
 ## How to extend
 
