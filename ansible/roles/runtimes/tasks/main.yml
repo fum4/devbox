@@ -7,11 +7,6 @@
     creates: "/home/{{ devbox_user }}/.local/bin/mise"
   become_user: "{{ devbox_user }}"
 
-- name: Activate mise in bashrc
-  lineinfile:
-    path: "/home/{{ devbox_user }}/.bashrc"
-    line: 'eval "$(/home/{{ devbox_user }}/.local/bin/mise activate bash)"'
-    state: present
-    create: true
-    owner: "{{ devbox_user }}"
-    group: "{{ devbox_user }}"
+# Note: mise activation in ~/.bashrc is owned by chezmoi (see
+# chezmoi/dot_bashrc — the `if [ -x ~/.local/bin/mise ]; then ...` block).
+# We don't append it here too; chezmoi's version is the source of truth.
