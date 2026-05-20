@@ -38,10 +38,10 @@
     enabled: true
     state: started
 
+# NOTE: group membership only takes effect on new logins. Existing
+# shells need `newgrp docker` or a fresh ssh/zellij session.
 - name: Add {{ devbox_user }} to the docker group (no-sudo docker commands)
   user:
     name: "{{ devbox_user }}"
     groups: docker
     append: true
-  # NOTE: group membership only takes effect on new logins. Existing
-  # shells need `newgrp docker` or a fresh ssh/zellij session.

@@ -23,20 +23,22 @@ jobs:
           python-version: '3.x'
 
       - name: Install Ansible + yamllint
-        run: |
-          pip install ansible-core yamllint
+        run: pip install ansible-core yamllint
 
       - name: yamllint
-        run: yamllint -d '{extends: default, rules: {line-length: disable, document-start: disable, truthy: {check-keys: false}}}' ansible/ .github/
+        # Config lives in ./.yamllint at the repo root.
+        run: yamllint .
 
       - name: ansible-playbook --syntax-check
-        # Use the example inventory so the syntax check has a real host group
-        # to bind `hosts: devbox` against. No real connection happens.
+        # Use the example inventory so the syntax check has a host group to
+        # bind `hosts: devbox` against. No real connection happens.
         run: ansible-playbook --syntax-check -i ansible/inventory.ini.example ansible/site.yml
+
+      - name: Install shellcheck
+        run: sudo apt-get install -y shellcheck
 
       - name: shellcheck
         run: |
-          sudo apt-get install -y shellcheck
           shellcheck \
             bin/doctor \
             chezmoi/dot_bashrc \

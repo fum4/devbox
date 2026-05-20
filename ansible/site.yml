@@ -43,8 +43,9 @@
     - role: ntfy                # ntfy CLI (dormant; no integrations yet)
       tags: [ntfy, tools]
 
-    - role: ansible-cli         # install Ansible itself so the box can re-run site.yml against
-                                # localhost (see chezmoi/dot_local/bin/executable_devbox-reprov)
+    # Installs Ansible itself so the box can re-run site.yml against
+    # localhost — see chezmoi/dot_local/bin/executable_devbox-reprov.
+    - role: ansible-cli
       tags: [ansible-cli, tools]
 
     - role: github-identity     # install age-encrypted GitHub SSH key + PAT (see docs/github.md)
@@ -53,10 +54,9 @@
     - role: repos               # clone every repo in ../repos.txt to ~/code/ (gated on gh auth)
       tags: [repos]
 
-    - role: agents              # AGENTS.md + cross-agent skills + wt prune cron
-                                # Runs AFTER repos so ~/code/devbox/ is checked out — the
-                                # role symlinks ~/.agents/ → ~/code/devbox/agents/, which
-                                # requires the source to exist on disk.
+    # `agents` symlinks ~/.agents/ → ~/code/devbox/agents/, so the devbox
+    # repo must already be checked out — must run AFTER `repos`.
+    - role: agents
       tags: [agents, dotfiles]
 
     - role: dotfiles            # chezmoi + apply ../chezmoi

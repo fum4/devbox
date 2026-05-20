@@ -194,7 +194,9 @@ cmd_rm() {
     else
         git worktree remove "$wt_path"
     fi
-    [[ -n "$branch" ]] && git branch -D "$branch" 2>/dev/null || true
+    if [[ -n "$branch" ]]; then
+        git branch -D "$branch" 2>/dev/null || true
+    fi
     echo "Removed worktree: $wt_path"
 }
 
@@ -226,8 +228,9 @@ cmd_prune() {
                                  pr list --head "$branch" --state merged --json number --jq 'length' 2>/dev/null || echo 0)
                   if [[ "${merged_count:-0}" -gt 0 ]]; then
                       echo "[wt prune] $(basename "$repo"): removing $wt_path (branch $branch merged)"
-                      git -C "$repo" worktree remove "$wt_path" 2>/dev/null \
-                          && git -C "$repo" branch -D "$branch" 2>/dev/null || true
+                      if git -C "$repo" worktree remove "$wt_path" 2>/dev/null; then
+                          git -C "$repo" branch -D "$branch" 2>/dev/null || true
+                      fi
                   fi
               done
     done

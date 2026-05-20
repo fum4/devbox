@@ -1,0 +1,11 @@
+---
+extends: default
+
+rules:
+  # Long lines are fine in role comments and Ansible task arguments.
+  line-length: disable
+  # We don't use `---` at the top of every YAML file.
+  document-start: disable
+  # 'yes/no' as Ansible booleans is intentional; don't flag.
+  truthy:
+    check-keys: false

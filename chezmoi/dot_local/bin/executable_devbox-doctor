@@ -35,7 +35,8 @@ check() {
 }
 
 check_symlink() {
-    local label="$1" path="$2"
+    local path="$1"
+    local label="${path/#$HOME/'~'}"   # display $HOME/... as ~/... for readability
     if [[ -L "$path" && -e "$path" ]]; then
         pass "$label ($path → $(readlink "$path"))"
     elif [[ -L "$path" ]]; then
@@ -70,7 +71,10 @@ if [[ -d "$DEVBOX_REPO/.git" ]]; then
     else
         warn "$DEVBOX_REPO has uncommitted changes" "git -C $DEVBOX_REPO status"
     fi
-    if [[ -n "$(git -C "$DEVBOX_REPO" log --oneline @{u}.. 2>/dev/null)" ]]; then
+    # @{u}.. is git syntax for "commits in HEAD not yet in upstream" — quoted
+    # in a literal so shellcheck doesn't mistake the braces for brace expansion.
+    unpushed_range='@{u}..'
+    if [[ -n "$(git -C "$DEVBOX_REPO" log --oneline "$unpushed_range" 2>/dev/null)" ]]; then
         warn "$DEVBOX_REPO has unpushed commits" "git -C $DEVBOX_REPO push"
     else
         pass "$DEVBOX_REPO is in sync with origin"
@@ -80,13 +84,13 @@ else
 fi
 
 section "Agent-layer symlinks"
-check_symlink "~/.agents/AGENTS.md"      "$HOME/.agents/AGENTS.md"
-check_symlink "~/.agents/skills"         "$HOME/.agents/skills"
-check_symlink "~/.claude/CLAUDE.md"      "$HOME/.claude/CLAUDE.md"
-check_symlink "~/.claude/skills"         "$HOME/.claude/skills"
-check_symlink "~/.claude/settings.json"  "$HOME/.claude/settings.json"
-check_symlink "~/.codex/AGENTS.md"       "$HOME/.codex/AGENTS.md"
-check_symlink "~/.codex/skills"          "$HOME/.codex/skills"
+check_symlink "$HOME/.agents/AGENTS.md"
+check_symlink "$HOME/.agents/skills"
+check_symlink "$HOME/.claude/CLAUDE.md"
+check_symlink "$HOME/.claude/skills"
+check_symlink "$HOME/.claude/settings.json"
+check_symlink "$HOME/.codex/AGENTS.md"
+check_symlink "$HOME/.codex/skills"
 
 section "Cron"
 if crontab -l 2>/dev/null | grep -q 'wt prune'; then
@@ -115,7 +119,6 @@ else
 fi
 
 section "Summary"
-total=$((fails + warns))
 if (( fails == 0 && warns == 0 )); then
     printf "  %sall checks passed%s\n" "$GREEN" "$RESET"
 elif (( fails == 0 )); then

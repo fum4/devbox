@@ -14,7 +14,7 @@ set -u
 
 # Resolve repo root from script location (so it works from any cwd)
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$REPO"
+cd "$REPO" || exit 2
 
 # Pull the canonical "who owns this devbox" value from Ansible vars rather
 # than hardcoding. One source of truth across the whole repo.
