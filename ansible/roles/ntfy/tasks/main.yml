@@ -5,12 +5,15 @@
 # Installed dormant; no topics, subscriptions, or systemd services wired up.
 # To use: pick a random topic, `curl -d "msg" ntfy.sh/<topic>`, subscribe on phone.
 
+# `check_mode: false` makes the GET run even under --check (safe + idempotent),
+# so the next task has `ntfy_release.json` populated.
 - name: Resolve latest ntfy release tag
   ansible.builtin.uri:
     url: https://api.github.com/repos/binwiederhier/ntfy/releases/latest
     return_content: true
   register: ntfy_release
   changed_when: false
+  check_mode: false
 
 - name: Install ntfy .deb
   apt:
