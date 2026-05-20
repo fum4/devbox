@@ -153,12 +153,50 @@ Keys are *consumed on use* (when non-reusable). You don't need to revoke afterwa
 
 ## Tailscale SSH
 
-Tailscale also offers an SSH layer that uses tailnet identity instead of traditional SSH keys. Our devbox uses `tailscale up --ssh` (the playbook sets this), which means:
+Tailscale also offers an SSH layer that uses tailnet identity instead of traditional SSH keys — convenient on devices like phones where managing SSH keys is fiddly. Our devbox enables it via `tailscale up --ssh` (the `tailscale` Ansible role sets this).
 
-- Other tailnet members can `ssh fum4@devbox` via Tailscale SSH (auth via Tailscale ACL)
-- Traditional SSH (port 22 + key) still works in parallel — preferred for now
+**Important: Tailscale SSH is deny-by-default.** Even with SSH enabled on the server, your tailnet's ACL must explicitly grant the connection. A fresh tailnet has no `ssh` block → connection attempts hit `SSH-2.0-Tailscale … end of file` (the server accepts the TCP/SSH handshake then drops the session at the ACL check).
 
-You don't have to configure anything on the laptop side to use Tailscale SSH; if the VPS has it enabled, just `ssh devbox` works (and Tailscale negotiates auth invisibly when the source is a tailnet member).
+### One-time tailnet setup
+
+Edit https://login.tailscale.com/admin/acls and add an `ssh` stanza (alongside `tagOwners`, etc.):
+
+```hujson
+{
+  "tagOwners": {
+    "tag:devbox": ["autogroup:admin"],
+  },
+  "ssh": [
+    {
+      "action": "accept",
+      "src":    ["autogroup:owner"],
+      "dst":    ["tag:devbox"],
+      "users":  ["fum4"],
+    },
+  ],
+}
+```
+
+- `src: autogroup:owner` — only the tailnet owner can SSH. Other tailnet members and shared users are denied.
+- `dst: tag:devbox` — restricted to machines with that tag. Future tagged infra is *not* automatically SSH-able.
+- `users: ["fum4"]` — only as the `fum4` Unix user. Direct root login over SSH stays denied.
+- `action: "accept"` — no per-session prompt. Swap to `"check"` if you want Tailscale to push an "Allow SSH to devbox?" notification on every new session (extra friction, useful if your phone is sometimes used by others or you're traveling somewhere risky).
+
+Save the ACL — connections succeed immediately, no restart needed on either end.
+
+### Usage
+
+From any tailnet device:
+
+```bash
+ssh fum4@devbox      # MagicDNS resolves devbox → tailnet IP
+```
+
+No key, no password — Tailscale negotiates auth invisibly using your tailnet identity.
+
+### Traditional SSH still works in parallel
+
+The `base` role copies your laptop's SSH key into `fum4`'s `authorized_keys`, so classic SSH (port 22 + key) from a device that has the key — typically your laptop — keeps working. Tailscale SSH is mainly for devices where managing a key is annoying (phone). The laptop can use either; both end up at the same shell.
 
 ## Funnel (for later)
 
@@ -168,7 +206,7 @@ Tailscale Funnel exposes a tailnet service publicly at `<host>.<tailnet>.ts.net`
 
 - **Don't run Tailscale on the laptop on a different account from the phone/VPS** — devices on different tailnets can't see each other.
 - **Don't share auth keys**. They're powerful (a stolen key = stranger joins your tailnet). Treat like passwords; rotate immediately if leaked.
-- **Don't configure ACLs** at this scale — the default "anyone in the tailnet can reach anyone" is fine for one user.
+- **Don't reach for ACLs unless you need them.** The default "anyone in the tailnet can reach anyone" is fine for the network layer when you're a single user. The one ACL stanza you *do* need is the Tailscale-SSH grant — see "Tailscale SSH" above.
 
 ## When to revisit Tailscale
 
