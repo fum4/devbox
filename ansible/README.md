@@ -19,10 +19,10 @@ Each role does one concern. Roles run in the order in `site.yml`:
 | 9 | `process-compose` | Install the binary (no services configured yet) | Available for headless service stacks (DB/Redis) when needed |
 | 10 | `docker` | Install Docker Engine + Compose plugin | Local infra stacks (Postgres/Redis/MinIO for projects); per-repo `compose.yml` brings them up |
 | 11 | `ntfy` | Install the ntfy CLI binary | Installed dormant — no topics or systemd subscriptions wired up |
-| 12 | `agents` | Symlink `~/.agents/{AGENTS.md,README.md,skills}` → `~/code/devbox/agents/`, then point `~/.claude/` + `~/.codex/` agent paths at `~/.agents/`; install the `wt prune` cron | Needs the user (base) and a checkout of this repo on the VPS |
-| 13 | `dotfiles` | Install chezmoi, `chezmoi init --apply --source=../chezmoi` | Needs the user, mise activated, all tools in place |
-| 14 | `github-identity` | Decrypt age-encrypted GitHub SSH key + PAT (`secrets/github-*.age`), install on VPS, `gh auth login --with-token` | Bootstrap once per laptop (see `docs/github.md`); skipped silently if secrets absent |
-| 15 | `repos` | Clone every line of `repos.txt` to `~/code/<basename>`, then `mise install` + `mise run setup` per repo | Needs github-identity (or a manual `gh auth login`) for git/gh access |
+| 12 | `github-identity` | Decrypt age-encrypted GitHub SSH key + PAT (`secrets/github-*.age`), install on VPS, `gh auth login --with-token` | Bootstrap once per laptop (see `docs/github.md`); skipped silently if secrets absent. Runs before `repos` so SSH-cloning works. |
+| 13 | `repos` | Clone every line of `repos.txt` to `~/code/<basename>`, then `mise install` + `mise run setup` per repo | Includes the devbox repo itself, so `~/code/devbox/` is on disk before `agents` symlinks at it. |
+| 14 | `agents` | Symlink `~/.agents/{AGENTS.md,README.md,skills}` → `~/code/devbox/agents/`, then point `~/.claude/` + `~/.codex/` agent paths at `~/.agents/`; install the `wt prune` cron | Must run *after* `repos` — symlink targets are paths inside the devbox checkout. |
+| 15 | `dotfiles` | Install chezmoi, `chezmoi init --apply --source=../chezmoi` | Needs the user, mise activated, all tools in place |
 
 ## Prerequisites
 

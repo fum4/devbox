@@ -43,14 +43,17 @@
     - role: ntfy                # ntfy CLI (dormant; no integrations yet)
       tags: [ntfy, tools]
 
-    - role: agents              # AGENTS.md + cross-agent skills + wt prune cron
-      tags: [agents, dotfiles]
-
-    - role: dotfiles            # chezmoi + apply ../chezmoi
-      tags: [dotfiles]
-
     - role: github-identity     # install age-encrypted GitHub SSH key + PAT (see docs/github.md)
       tags: [github-identity, repos]
 
     - role: repos               # clone every repo in ../repos.txt to ~/code/ (gated on gh auth)
       tags: [repos]
+
+    - role: agents              # AGENTS.md + cross-agent skills + wt prune cron
+                                # Runs AFTER repos so ~/code/devbox/ is checked out — the
+                                # role symlinks ~/.agents/ → ~/code/devbox/agents/, which
+                                # requires the source to exist on disk.
+      tags: [agents, dotfiles]
+
+    - role: dotfiles            # chezmoi + apply ../chezmoi
+      tags: [dotfiles]

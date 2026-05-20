@@ -8,8 +8,10 @@
 #   3. symlink ~/.claude/skills and ~/.codex/skills → ~/.agents/skills
 #   4. install the 30-min `wt prune` cron entry for worktree cleanup
 #
-# Precondition: ~/code/devbox/ is checked out (the playbook itself runs from
-# inside it, so this always holds when ansible executes).
+# Precondition: ~/code/devbox/ is checked out — the `repos` role (which runs
+# before this one per site.yml) handles that. The playbook also runs from
+# inside the repo when invoked locally (devbox-reprov), so the checkout is
+# always there.
 
 - name: Ensure agent home dirs exist
   file:
