@@ -46,7 +46,8 @@ devbox/
 │   ├── mobile.md        phone-side apps (Tailscale, Claude, Expo Go)
 │   ├── provisioning.md       the provisioning runbook (every fresh VPS)
 │   └── recovery.md      incident response — when something breaks
-└── repos.txt            repos cloned on every fresh provision (kost, devbox, …)
+├── repos.txt            repos cloned on every fresh provision (kost, devbox, …)
+└── .github/workflows/   CI — yamllint + ansible syntax check + shellcheck
 ```
 
 Each subdirectory has its own README. **Read top to bottom**: start here, then `docs/README.md` (setup + recovery), `ansible/README.md` (provisioning internals), `chezmoi/README.md` (dotfiles), and `agents/README.md` (agent instructions + skills).
@@ -170,6 +171,7 @@ Recoverable state: code (git), dotfiles (this repo), tools (Ansible roles). Non-
 - **Branch model**: `main` (no feature branches yet; we're solo).
 - **Commits**: Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`).
 - **Push policy**: human-authorized. Local commits free; pushes need explicit go-ahead.
+- **CI**: every push + PR runs lint + ansible syntax-check + shellcheck (`.github/workflows/ci.yml`). Doesn't (yet) e2e-provision an ephemeral box — that's a planned follow-up.
 - **Secrets**: never committed in plaintext. Use age-encrypted files under `ansible/secrets/` (the dominant path — Tailscale OAuth, GitHub SSH key, GitHub PAT). Env vars like `TAILSCALE_AUTHKEY` are a legacy fallback only for the pre-bootstrap case.
 - **Docs as truth**: if a README disagrees with running code, the code is right and the doc is a bug. Fix the doc in the same change.
 
