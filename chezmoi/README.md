@@ -36,7 +36,8 @@ chezmoi/
     └── bin/
         ├── executable_zj                   → ~/.local/bin/zj                  (chmod +x)
         ├── executable_wt                   → ~/.local/bin/wt                  (chmod +x)
-        └── executable_devbox-scaffold      → ~/.local/bin/devbox-scaffold     (chmod +x)
+        ├── executable_devbox-scaffold      → ~/.local/bin/devbox-scaffold     (chmod +x)
+        └── executable_devbox-reprov        → ~/.local/bin/devbox-reprov       (chmod +x)
 ```
 
 ### `dot_bashrc`
@@ -110,12 +111,25 @@ devbox-scaffold api:api:dev mobile:mobile:dev worker
 
 Invoked via the [`clone-repo`](../agents/skills/clone-repo/SKILL.md) skill — the skill inspects the repo first, proposes the right args, and waits for user confirmation before running.
 
+### `dot_local/bin/executable_devbox-reprov`
+
+Re-runs the devbox Ansible playbook locally on the VPS so reprovisioning doesn't require the laptop. Pulls the latest from `origin/main`, then `ansible-playbook -i ansible/inventory-local.ini ansible/site.yml "$@"`.
+
+```bash
+devbox-reprov                       # full reprov
+devbox-reprov --tags docker         # just one role
+devbox-reprov --check --diff        # dry-run preview
+```
+
+Needs Ansible installed locally (the `ansible-cli` role does this) and `~/code/devbox/` checked out (the `repos` role + `repos.txt`). First-time provision still has to come from the laptop.
+
 ## Public API
 
-- The destination paths (`~/.bashrc`, `~/.config/zellij/config.kdl`, `~/.local/bin/zj`, `~/.local/bin/wt`, `~/.local/bin/devbox-scaffold`) are the public surface.
+- The destination paths (`~/.bashrc`, `~/.config/zellij/config.kdl`, `~/.local/bin/zj`, `~/.local/bin/wt`, `~/.local/bin/devbox-scaffold`, `~/.local/bin/devbox-reprov`) are the public surface.
 - `zj` is the human/agent-facing way to attach to a project workspace.
 - `wt` is the human/agent-facing way to drive the worktree → PR → merge lifecycle.
 - `devbox-scaffold` is the human/agent-facing way to scaffold a new repo's dev contract (`.mise.toml` + `zellij.kdl`).
+- `devbox-reprov` is the human/agent-facing way to re-run the playbook locally on the VPS.
 
 ## How to extend
 

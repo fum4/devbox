@@ -43,6 +43,10 @@
     - role: ntfy                # ntfy CLI (dormant; no integrations yet)
       tags: [ntfy, tools]
 
+    - role: ansible-cli         # install Ansible itself so the box can re-run site.yml against
+                                # localhost (see chezmoi/dot_local/bin/executable_devbox-reprov)
+      tags: [ansible-cli, tools]
+
     - role: github-identity     # install age-encrypted GitHub SSH key + PAT (see docs/github.md)
       tags: [github-identity, repos]
 

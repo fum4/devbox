@@ -19,7 +19,7 @@ devbox/
 │   ├── ansible.cfg
 │   ├── inventory.ini.example
 │   ├── group_vars/all.yml
-│   ├── site.yml         top-level playbook (13 roles)
+│   ├── site.yml         top-level playbook (16 roles)
 │   ├── roles/           one role per concern (base, hardening, tailscale, …)
 │   └── secrets/         age-encrypted material (gitignored)
 ├── agents/              AGENTS.md + skills + Claude/Codex runtime config — see agents/README.md
@@ -33,7 +33,8 @@ devbox/
 │   └── dot_local/bin/
 │       ├── executable_zj                workspace launcher (Zellij sessions)
 │       ├── executable_wt                worktree + PR + merge wrapper
-│       └── executable_devbox-scaffold   scaffolds .mise.toml + zellij.kdl for a new repo
+│       ├── executable_devbox-scaffold   scaffolds .mise.toml + zellij.kdl for a new repo
+│       └── executable_devbox-reprov     re-run ansible site.yml locally on the VPS
 ├── bin/                 laptop-side utility scripts — see bin/README.md
 │   └── doctor           verify the laptop is provisioning-ready
 ├── docs/                end-to-end setup + recovery guides — see docs/README.md

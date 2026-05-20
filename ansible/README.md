@@ -19,10 +19,11 @@ Each role does one concern. Roles run in the order in `site.yml`:
 | 9 | `process-compose` | Install the binary (no services configured yet) | Available for headless service stacks (DB/Redis) when needed |
 | 10 | `docker` | Install Docker Engine + Compose plugin | Local infra stacks (Postgres/Redis/MinIO for projects); per-repo `compose.yml` brings them up |
 | 11 | `ntfy` | Install the ntfy CLI binary | Installed dormant — no topics or systemd subscriptions wired up |
-| 12 | `github-identity` | Decrypt age-encrypted GitHub SSH key + PAT (`secrets/github-*.age`), install on VPS, `gh auth login --with-token` | Bootstrap once per laptop (see `docs/github.md`); skipped silently if secrets absent. Runs before `repos` so SSH-cloning works. |
-| 13 | `repos` | Clone every line of `repos.txt` to `~/code/<basename>`, then `mise install` + `mise run setup` per repo | Includes the devbox repo itself, so `~/code/devbox/` is on disk before `agents` symlinks at it. |
-| 14 | `agents` | Symlink `~/.agents/{AGENTS.md,README.md,skills}` → `~/code/devbox/agents/`, then point `~/.claude/` + `~/.codex/` agent paths at `~/.agents/`; install the `wt prune` cron | Must run *after* `repos` — symlink targets are paths inside the devbox checkout. |
-| 15 | `dotfiles` | Install chezmoi, `chezmoi init --apply --source=../chezmoi` | Needs the user, mise activated, all tools in place |
+| 12 | `ansible-cli` | Install Ansible itself (`apt install ansible`) | Enables self-reprovisioning from the VPS via `devbox-reprov` — see "Re-running from the VPS itself" below |
+| 13 | `github-identity` | Decrypt age-encrypted GitHub SSH key + PAT (`secrets/github-*.age`), install on VPS, `gh auth login --with-token` | Bootstrap once per laptop (see `docs/github.md`); skipped silently if secrets absent. Runs before `repos` so SSH-cloning works. |
+| 14 | `repos` | Clone every line of `repos.txt` to `~/code/<basename>`, then `mise install` + `mise run setup` per repo | Includes the devbox repo itself, so `~/code/devbox/` is on disk before `agents` symlinks at it. |
+| 15 | `agents` | Symlink `~/.agents/{AGENTS.md,README.md,skills}` → `~/code/devbox/agents/`, then point `~/.claude/` + `~/.codex/` agent paths at `~/.agents/`; install the `wt prune` cron | Must run *after* `repos` — symlink targets are paths inside the devbox checkout. |
+| 16 | `dotfiles` | Install chezmoi, `chezmoi init --apply --source=../chezmoi` | Needs the user, mise activated, all tools in place |
 
 ## Prerequisites
 
@@ -106,7 +107,7 @@ ansible-playbook -i inventory.ini site.yml --skip-tags tools
 
 Tags currently defined:
 - `bootstrap` — base, hardening, tailscale (the "boot from nothing" subset)
-- `tools` — runtimes, agent-tools, claude, zellij, claude-squad, process-compose, docker, ntfy
+- `tools` — runtimes, agent-tools, claude, zellij, claude-squad, process-compose, docker, ntfy, ansible-cli
 - `dotfiles` — agents + chezmoi apply
 - One tag per role (e.g. `--tags claude`)
 
@@ -117,6 +118,25 @@ ansible-playbook -i inventory.ini site.yml --check --diff
 ```
 
 `--check` reports what would change without changing anything. `--diff` shows file content changes. Combined: a safe preview.
+
+### Re-running from the VPS itself
+
+After the first successful provision from the laptop, the `ansible-cli` role leaves Ansible installed on the box. From then on you can re-run the playbook *on the devbox* (e.g., from a phone-driven Claude session) without involving the laptop:
+
+```bash
+devbox-reprov                       # pull main + ansible-playbook against localhost
+devbox-reprov --tags docker         # just one role
+devbox-reprov --check --diff        # dry-run preview
+```
+
+`devbox-reprov` (chezmoi-managed at `chezmoi/dot_local/bin/executable_devbox-reprov`) does:
+
+1. `git pull --ff-only origin main` in `~/code/devbox/`
+2. `ansible-playbook -i ansible/inventory-local.ini ansible/site.yml "$@"`
+
+`inventory-local.ini` is the same `[devbox]` group but with `ansible_connection=local` — no SSH, no keys, just direct execution under the current user (which is `fum4`, with NOPASSWD sudo for `become: true`).
+
+**First-time bootstrap still requires the laptop** — a fresh VPS has no Ansible until the `ansible-cli` role runs once. That's the chicken-and-egg the laptop solves. Every subsequent rebuild from the box is self-service.
 
 ## How to extend
 

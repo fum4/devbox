@@ -1,0 +1,13 @@
+---
+# Install Ansible on the devbox itself so it can re-run the playbook
+# against localhost (see `devbox-reprov`). Closes the loop on
+# "edit a role from the phone → push → reprov without the laptop."
+
+- name: Install Ansible from apt
+  apt:
+    name:
+      - ansible
+      - python3-jmespath   # used by Ansible filters in some roles
+    state: present
+    update_cache: true
+    cache_valid_time: 3600

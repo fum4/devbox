@@ -1,0 +1,39 @@
+#!/bin/bash
+# devbox-reprov — re-run the devbox Ansible playbook locally on this VPS.
+#
+# Pulls latest from origin/main first, then runs the playbook with
+# --connection=local against localhost (via ansible/inventory-local.ini).
+# Lets you edit a role from a phone session, commit + push, then apply
+# the change from the same session — no laptop required for the steady
+# state.
+#
+# Passes any extra args straight to ansible-playbook, so:
+#   devbox-reprov --tags docker           # re-run just the docker role
+#   devbox-reprov --check --diff          # dry-run preview
+#   devbox-reprov --skip-tags tools       # skip the slow tools install
+
+set -euo pipefail
+
+REPO="$HOME/code/devbox"
+
+if [[ ! -d "$REPO/.git" ]]; then
+    echo "devbox-reprov: $REPO is not a git checkout — can't reprov" >&2
+    echo "  (this command needs the devbox repo cloned at ~/code/devbox/)" >&2
+    exit 1
+fi
+
+if ! command -v ansible-playbook >/dev/null; then
+    echo "devbox-reprov: ansible-playbook not on PATH" >&2
+    echo "  (install via apt or by running provisioning from the laptop once)" >&2
+    exit 1
+fi
+
+cd "$REPO"
+
+echo "==> git pull --ff-only origin main"
+git pull --ff-only origin main
+
+cd ansible
+
+echo "==> ansible-playbook -i inventory-local.ini site.yml $*"
+exec ansible-playbook -i inventory-local.ini site.yml "$@"
