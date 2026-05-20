@@ -89,6 +89,20 @@ The VPS does **not** auto-pull repos on a schedule. Freshness is enforced at the
 
 If you find yourself wanting to `git pull` on a default branch manually, you don't need to — the next `wt new` or `wt merge` handles it. However, you can do it, if needed.
 
+## Worktree environment files
+
+Gitignored env files (`.env`, `.env.local`, `apps/*/.env*`, …) **do not follow** worktree creation — they live in whichever checkout originally created them. A new worktree that needs them will look fine to git and fail opaquely the first time you run the dev contract.
+
+When you start work in a worktree, before running tasks:
+
+1. **Find them in the source checkout** —
+   `git -C ~/code/<repo> ls-files --others --ignored --exclude-standard | grep -E '(^|/)\.env'`.
+2. **Mirror anything that exists** into the same path in the new worktree. Without this the dev contract throws at boot (e.g. zod "Invalid env" on Expo, "DATABASE_URL is required" on drizzle-kit) or runs but talks to the wrong host.
+3. **Sanity-check host-pointing values** (`*_BASE_URL`, anything with an IP or `localhost`). If the env was authored on a laptop and you're now on the devbox, swap LAN IPs for the devbox's Tailscale MagicDNS FQDN so phones / other tailnet peers can reach the dev server.
+4. **When you discover a new env file pattern that isn't yet listed** in that repo's `CLAUDE.md` / `AGENTS.md`, **add the concrete list there** (source path → destination path, plus any host-substitution notes). Per-repo facts belong in per-repo agent files; this section documents only the universal principle. The next session shouldn't have to re-derive it.
+
+Same applies in reverse for new env vars added during a session — if you add one to the worktree's env file, also add it to `.env.example` so other checkouts pick it up.
+
 ## Conventions
 
 - **Don't `sudo`** unless necessary. `fum4` has NOPASSWD sudo but day-to-day work doesn't need it.
