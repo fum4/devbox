@@ -115,6 +115,7 @@ Same applies in reverse for new env vars added during a session — if you add o
 - **Globals via mise, not npm/pnpm**: don't install global npm/pnpm packages. Add them as `[tools]` in a repo's `.mise.toml`.
 - **Don't edit chezmoi-managed files directly**: `~/.bashrc`, `~/.config/zellij/config.kdl`, `~/.local/bin/*`. Edit `~/code/devbox/chezmoi/` and `chezmoi apply` (or run the ansible role).
 - **New tools go through Ansible**: don't `apt install X` ad-hoc. Add a role in `~/code/devbox/ansible/roles/` so the VPS stays reproducible.
+- **Verify latest version before installing or pinning.** Before adding any versioned dependency — apt / pip / npm / cargo / brew package, GitHub Action, container image, binary release — check the *current* latest stable. Use `gh api repos/<owner>/<repo>/releases/latest --jq '.tag_name'`, the package registry, or the project's release page. Don't lean on remembered version numbers; the gap between "I last checked" and "now" is usually months and sometimes years. Pin to actual-latest in the same commit, and re-check on every revisit.
 - **GitHub identity is age-encrypted**: this VPS's GitHub SSH key (`~/.ssh/github-ssh`) and the `gh` CLI auth come from `ansible/secrets/github-*.age`, decrypted on the laptop during provisioning. Don't manually `gh auth login` or `ssh-keygen` for GitHub — those changes get clobbered on re-provision and the devbox loses its persistent identity. See `~/code/devbox/docs/github.md` for the rotation procedure.
 
 ## Common operations
