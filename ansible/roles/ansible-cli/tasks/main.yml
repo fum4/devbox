@@ -2,12 +2,18 @@
 # Install Ansible on the devbox itself so it can re-run the playbook
 # against localhost (see `devbox-reprov`). Closes the loop on
 # "edit a role from the phone → push → reprov without the laptop."
+#
+# `age` is included because the github-identity and tailscale roles
+# decrypt secrets `delegate_to: localhost`. In normal (laptop-driven)
+# provisioning the laptop is the controller and already has age. In
+# self-reprov the box itself is the controller, so age has to be local.
 
-- name: Install Ansible from apt
+- name: Install Ansible + age from apt
   apt:
     name:
       - ansible
       - python3-jmespath   # used by Ansible filters in some roles
+      - age                # required for self-reprov (see comment above)
     state: present
     update_cache: true
     cache_valid_time: 3600
