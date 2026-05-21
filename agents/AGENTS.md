@@ -105,6 +105,18 @@ When you start work in a worktree, before running tasks:
 
 Same applies in reverse for new env vars added during a session — if you add one to the worktree's env file, also add it to `.env.example` so other checkouts pick it up.
 
+## Code quality — modularize, reuse, refactor
+
+Keep the code clean, predictable, and well-bounded across every repo:
+
+- **Componentize / modularize by default.** Give each unit a clear, single responsibility and a sane boundary. Prefer small, named, reusable pieces over sprawling inline blocks.
+- **Reuse before rebuild.** Before writing something, look for an existing component / module / helper that already does it. Compose what's there rather than duplicating.
+- **The rule of two.** The first time you write something, inline is fine. The *second* time you find yourself writing the same shape (a layout, a button pattern, a data transform, a hook), extract it into a shared component/module and route both callers through it. Don't wait for a third.
+- **Always look for refactor opportunities** — even outside the immediate task. If you spot duplication, a leaky boundary, or a pattern that wants a name, call it out and (if cheap) fix it.
+- **But don't over-engineer.** No abstractions for a single use case, no premature generality, no framework-building. Three similar lines beat a wrong abstraction. Extract when the duplication is *real and repeated*, not hypothetical. The goal is clean and predictable, not clever.
+
+Per-repo specifics (architecture layers, naming, file-size limits) live in that repo's `CLAUDE.md` and win where they conflict — this is the cross-repo baseline.
+
 ## Conventions
 
 - **Don't `sudo`** unless necessary. `fum4` has NOPASSWD sudo but day-to-day work doesn't need it.
