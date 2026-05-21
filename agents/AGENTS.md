@@ -57,6 +57,8 @@ The most-touched docs by change type:
 | **`wt`** | Worktree + PR + merge wrapper (see below). Use this instead of raw `git worktree` / `gh pr` / other git related commands. |
 | **`gh`** | GitHub CLI. Use for git related actions not available through `wt`. |
 | **`devbox-scaffold`** | Generate `.mise.toml` + `zellij.kdl` for a new repo. Invoked via the [`clone-repo`](skills/clone-repo/SKILL.md) skill, which inspects the repo and proposes the right args before running. |
+| **`devbox-reprov`** | Re-run the Ansible playbook locally on the devbox (`git pull` then `ansible-playbook --connection=local`). Use this after editing a role/chezmoi source to apply changes without needing the laptop. Pass `--check --diff` for dry-run, `--tags <role>` for a narrow re-run. |
+| **`devbox-doctor`** | Read-only health check for the box (binaries on PATH, Tailscale + SSH, docker, agent-layer symlinks, repo cleanliness, free disk + memory). Run after a `devbox-reprov` to smoke-test, or any time things feel off. Exit code = number of failures. |
 | **ripgrep** (`rg`), **fd**, **jq** | Search and JSON parsing. Prefer over `grep -r` / `find` / `python -m json.tool`. |
 | **process-compose** | Headless service orchestration (Postgres, Redis, workers). Not for TUIs. |
 | **ntfy** | Push notifications to phone (installed dormant — `curl -d "msg" ntfy.sh/$NTFY_TOPIC` once a topic is wired). |
@@ -128,5 +130,7 @@ Same applies in reverse for new env vars added during a session — if you add o
 | Open a PR | `wt pr` (rebase + push + `gh pr create`) |
 | Merge + clean up | `wt merge` |
 | Clone + set up a new repo | use the `clone-repo` skill — clones from `github.com/fum4/<repo>` by default, proposes `devbox-scaffold` args, waits for user confirmation |
+| Apply devbox changes (role/chezmoi/skill/AGENTS.md edits) | `devbox-reprov` (or `devbox-reprov --check --diff` for a dry-run; `--tags <role>` for one role) |
+| Health-check the box | `devbox-doctor` |
 
 For when to use a worktree (and when not), the `parallel-work` skill in `~/.agents/skills/parallel-work/SKILL.md` has the full decision tree. For onboarding a new repo onto the devbox, the `clone-repo` skill walks through clone → inspect → confirm → scaffold.
