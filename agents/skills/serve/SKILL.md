@@ -1,9 +1,9 @@
 ---
-name: run-app
-description: Use when the user asks to run, start, stop, restart, or check on the dev servers for the current repo/worktree — "run the app", "start dev", "spin up the api", "kill it", "stop the servers", "is anything on :3030?", "what's running?". Handles cross-worktree port conflicts by inspecting what's bound, identifying which worktree owns each process, and asking before killing competing servers.
+name: serve
+description: Start, stop, restart, or check the dev servers for the current repo/worktree. Trigger on "/serve", "serve", "run the app", "start dev", "spin up the api", "stop the servers", "kill it", "restart the server", "is anything on :3030?", "what's running?". Handles cross-worktree port conflicts — inspects what's bound, finds which worktree owns each process, and asks before killing competing servers.
 ---
 
-# Per-worktree dev server runner
+# /serve — per-worktree dev server runner
 
 Every repo under `~/code/` carries its dev contract in `.mise.toml`. "Run the app" means: figure out *this repo's* dev tasks, check what's already alive across the whole box, and resolve conflicts with the user before acting. Same idea in reverse for "stop the app."
 

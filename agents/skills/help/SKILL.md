@@ -24,7 +24,7 @@ Available skills — invoke with /<name>:
   /new-work-session  — open a session that clarifies a task, then works in its own worktree
   /clone-repo        — clone + set up a new GitHub repo on the devbox
   /parallel-work     — (auto) guidance for branching work into a worktree
-  /run-app           — start/stop/restart the dev servers for the current worktree
+  /serve             — start/stop/restart the dev servers for the current worktree
   /help              — this list
 ```
 
