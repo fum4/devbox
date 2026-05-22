@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Global pre-push guard: refuse DELETES and FORCE-pushes (non-fast-forward)
+# to protected branches across every repo on the devbox. This is an
+# accidental-safety net, not a security control — `git push --no-verify`
+# bypasses it for the rare time you genuinely mean it.
+#
+# Wired in via `core.hooksPath` in ../config (chezmoi: dot_config/git/config).
+# See docs/git-guards.md.
+
+set -uo pipefail
+
+protected_regex='^refs/heads/(master|main)$'
+status=0
+
+# stdin lines: <local_ref> <local_sha> <remote_ref> <remote_sha>
+while read -r _local_ref local_sha remote_ref remote_sha; do
+  [[ "$remote_ref" =~ $protected_regex ]] || continue
+
+  # A delete push sends an all-zero local sha.
+  if [[ "$local_sha" =~ ^0+$ ]]; then
+    echo "✋  refusing to DELETE protected branch: ${remote_ref#refs/heads/}" >&2
+    status=1
+    continue
+  fi
+
+  # Non-fast-forward (force) push: the remote tip is not an ancestor of what
+  # we're pushing. Skip the check when the remote ref doesn't exist yet
+  # (all-zero remote sha = brand-new branch).
+  if [[ ! "$remote_sha" =~ ^0+$ ]]; then
+    if ! git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
+      echo "✋  refusing to FORCE-PUSH (non-fast-forward) to protected branch: ${remote_ref#refs/heads/}" >&2
+      status=1
+    fi
+  fi
+done
+
+if [[ $status -ne 0 ]]; then
+  echo "    If you truly intend this, re-run with: git push --no-verify" >&2
+fi
+
+exit $status

@@ -1,0 +1,9 @@
+# XDG-level git config managed by chezmoi (devbox repo).
+# Kept separate from ~/.gitconfig (identity / GitHub auth) so this file only
+# carries devbox-wide policy. Git merges both at "global" scope.
+
+[core]
+	# Route every repo's hooks through a single managed directory so the
+	# pre-push guard (refuse delete / force-push to master|main) applies
+	# everywhere. See dot_config/git/hooks/executable_pre-push.
+	hooksPath = ~/.config/git/hooks
