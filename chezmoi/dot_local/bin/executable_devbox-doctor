@@ -92,13 +92,6 @@ check_symlink "$HOME/.claude/settings.json"
 check_symlink "$HOME/.codex/AGENTS.md"
 check_symlink "$HOME/.codex/skills"
 
-section "Cron"
-if crontab -l 2>/dev/null | grep -q 'wt prune'; then
-    pass "wt prune cron entry present"
-else
-    fail "wt prune cron entry missing" "re-run --tags agents"
-fi
-
 section "Resources"
 mem_free_mb=$(awk '/MemAvailable:/ { printf "%d", $2 / 1024 }' /proc/meminfo)
 if (( mem_free_mb > 1024 )); then

@@ -36,7 +36,7 @@ USAGE
   wt merge [strategy]     Merge PR (default --squash, --delete-branch) + clean up worktree
   wt rm <task> [--force]  Remove a worktree. Refuses unless PR is MERGED (or --force).
   wt list                 List worktrees in the current repo.
-  wt prune                Sweep merged-PR worktrees across ~/code/* (cron-friendly).
+  wt prune                Manually sweep merged-PR worktrees across ~/code/* (prefer the /prune skill — it's session-aware).
   wt help                 Show this help.
 
 CONVENTIONS

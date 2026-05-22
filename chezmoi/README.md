@@ -94,11 +94,11 @@ wt pr [gh-args…]         # rebase + force-push-with-lease + gh pr create
 wt merge [strategy]      # merge PR (default --squash) + clean up worktree
 wt rm <task> [--force]   # remove a worktree (refuses unless PR is MERGED)
 wt list                  # list worktrees in the current repo
-wt prune                 # sweep merged-PR worktrees across ~/code/* (cron-friendly)
+wt prune                 # manually sweep merged-PR worktrees across ~/code/*
 wt help                  # full reference
 ```
 
-The 30-min `wt prune` cron is installed by the `agents` Ansible role.
+Pruning is **not** automated — the `/prune` skill is the session-aware way to clean up (it checks for live sessions + uncommitted work before removing anything). `wt prune` remains as a lower-level manual command.
 
 ### `dot_local/bin/executable_devbox-scaffold`
 
@@ -133,7 +133,6 @@ Read-only health check for the VPS — mirrors the laptop-side `bin/doctor` but 
 - Docker daemon reachable as the current user
 - `~/code/devbox/` is a clean git checkout, in sync with origin
 - All agent-layer symlinks resolve (`~/.agents/`, `~/.claude/*`, `~/.codex/*`, including `~/.claude/settings.json`)
-- `wt prune` cron entry present
 - Free memory + disk above thresholds
 
 Exit code = number of failures (0 = healthy). Safe to wire into cron / CI as a smoke test.

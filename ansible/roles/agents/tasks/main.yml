@@ -6,7 +6,6 @@
 #      (so edits to the devbox checkout are live with no apply step)
 #   2. symlink ~/.claude/CLAUDE.md and ~/.codex/AGENTS.md → ~/.agents/AGENTS.md
 #   3. symlink ~/.claude/skills and ~/.codex/skills → ~/.agents/skills
-#   4. install the 30-min `wt prune` cron entry for worktree cleanup
 #
 # Precondition: ~/code/devbox/ is checked out — the `repos` role (which runs
 # before this one per site.yml) handles that. The playbook also runs from
@@ -74,9 +73,12 @@
     owner: "{{ devbox_user }}"
     group: "{{ devbox_user }}"
 
-- name: Schedule `wt prune` cron (sweep merged-PR worktrees every 30 min)
+# Worktree pruning is intentionally NOT automated. A cron that removed merged
+# worktrees could orphan a live Claude session whose cwd is that worktree
+# (this bit us once). Pruning is now a considered, session-aware action via
+# the `/prune` skill — see agents/skills/prune/.
+- name: Remove the legacy `wt prune` cron if present
   cron:
     name: "wt prune"
     user: "{{ devbox_user }}"
-    minute: "*/30"
-    job: "/home/{{ devbox_user }}/.local/bin/wt prune >> /tmp/wt-prune.log 2>&1"
+    state: absent

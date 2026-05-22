@@ -22,7 +22,7 @@ Each role does one concern. Roles run in the order in `site.yml`:
 | 12 | `ansible-cli` | Install Ansible itself (`apt install ansible`) | Enables self-reprovisioning from the VPS via `devbox-reprov` — see "Re-running from the VPS itself" below |
 | 13 | `github-identity` | Decrypt age-encrypted GitHub SSH key + PAT (`secrets/github-*.age`), install on VPS, `gh auth login --with-token` | Bootstrap once per laptop (see `docs/github.md`); skipped silently if secrets absent. Runs before `repos` so SSH-cloning works. |
 | 14 | `repos` | Clone every line of `repos.txt` to `~/code/<basename>`, then `mise install` + `mise run setup` per repo | Includes the devbox repo itself, so `~/code/devbox/` is on disk before `agents` symlinks at it. |
-| 15 | `agents` | Symlink `~/.agents/{AGENTS.md,README.md,skills}` → `~/code/devbox/agents/`, then point `~/.claude/` + `~/.codex/` agent paths at `~/.agents/`; install the `wt prune` cron | Must run *after* `repos` — symlink targets are paths inside the devbox checkout. |
+| 15 | `agents` | Symlink `~/.agents/{AGENTS.md,README.md,skills}` → `~/code/devbox/agents/`, then point `~/.claude/` + `~/.codex/` agent paths at `~/.agents/` | Must run *after* `repos` — symlink targets are paths inside the devbox checkout. |
 | 16 | `dotfiles` | Install chezmoi, `chezmoi init --apply --source=../chezmoi` | Needs the user, mise activated, all tools in place |
 
 ## Prerequisites

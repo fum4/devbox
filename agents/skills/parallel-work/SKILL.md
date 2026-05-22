@@ -65,7 +65,7 @@ The session is named after the directory, so workspaces don't collide.
 
 - **`wt merge` after the PR was merged externally** (e.g. you clicked merge on GitHub mobile UI before the agent got there): `wt merge` detects MERGED state and skips the merge step, but still cleans up the worktree.
 - **PR closed without merge** (abandoned work): `wt rm <task> --force` to discard. Don't do this without confirming with the user — there might be work worth recovering.
-- **Forgot to clean up a worktree**: the 30-min `wt prune` cron sweeps any worktree whose PR is MERGED but not removed locally.
+- **Forgot to clean up a worktree**: run the `/prune` skill — it lists worktrees whose PR is MERGED, checks each for a live session + uncommitted work, and removes only the safe ones (with your confirmation). Cleanup is deliberate, never automatic — a cron used to do it but could orphan a live session, so it was removed.
 
 ## When NOT to use a worktree
 

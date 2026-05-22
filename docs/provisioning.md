@@ -106,7 +106,7 @@ ansible-playbook -i inventory.ini site.yml
 | `process-compose` | binary |
 | `docker` | Docker Engine + Compose plugin |
 | `ntfy` | CLI (dormant) |
-| `agents` | symlink `~/.agents/` → repo, install `wt prune` cron |
+| `agents` | symlink `~/.agents/` → repo |
 | `dotfiles` | chezmoi apply |
 | `github-identity` | decrypt + install age-encrypted GitHub SSH key + PAT |
 | `repos` | clone every repo in `repos.txt`, `mise install`, `mise run setup` |
