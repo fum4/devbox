@@ -80,6 +80,7 @@ The `description` is the most important field — both agents use it to decide w
 |---|---|
 | [`sessions`](skills/sessions/) | `/sessions` or "what's running" — inventory of every live Claude session + worktree, each with a one-line gist from the *transcript* (not the name). Backs the session-start ritual. Built on the `claude-sessions` helper. |
 | [`help`](skills/help/) | `/help` — list all available skills + one-line descriptions. |
+| [`prune`](skills/prune/) | `/prune` — session-aware cleanup: lists stale worktrees/sessions with reasons, confirms per item, never touches anything live or with uncommitted work, and parks sessions (`claude-park`) rather than killing them. |
 | [`new-chat-session`](skills/new-chat-session/) | `/new-chat-session` — spawn a fresh general-purpose session (via `claude-spawn`), attachable from the phone. |
 | [`new-work-session`](skills/new-work-session/) | `/new-work-session` — spawn a session primed (via `--append-system-prompt`) to clarify the task, then create a worktree before writing any code. |
 | [`parallel-work`](skills/parallel-work/) | Starting a new unrelated feature, parallel work, separate bug — guides the agent to use `wt new` for worktrees. |

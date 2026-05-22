@@ -40,7 +40,8 @@ chezmoi/
         ├── executable_devbox-reprov        → ~/.local/bin/devbox-reprov       (chmod +x)
         ├── executable_devbox-doctor        → ~/.local/bin/devbox-doctor       (chmod +x)
         ├── executable_claude-sessions      → ~/.local/bin/claude-sessions     (chmod +x)
-        └── executable_claude-spawn         → ~/.local/bin/claude-spawn        (chmod +x)
+        ├── executable_claude-spawn         → ~/.local/bin/claude-spawn        (chmod +x)
+        └── executable_claude-park          → ~/.local/bin/claude-park         (chmod +x)
 ```
 
 ### `dot_bashrc`
@@ -163,6 +164,16 @@ claude-spawn --name <name> [--cwd <dir>] [--prompt-file <path>] [--resume <id>]
 
 `--prompt-file` appends a file's contents to the system prompt (how `/new-work-session` primes its clarify→worktree→code protocol); `--resume` recovers an existing session by id. Backs the `/new-chat-session` and `/new-work-session` skills. Requires being inside a Zellij session.
 
+### `dot_local/bin/executable_claude-park`
+
+"Park, not kill" a session: records its `claude --resume <id>` line to `~/.claude/parked-sessions.log` **first**, then closes its Zellij tab. The close is reversible — the resume command is logged and the transcript persists on disk regardless.
+
+```bash
+claude-park <session-name>
+```
+
+Backs the `/prune` skill (which calls it under per-item confirmation). This is the deterministic "record-before-close" guarantee — the reason `/prune` can close a session without risk of losing it.
+
 ## Public API
 
 - The destination paths (`~/.bashrc`, `~/.config/zellij/config.kdl`, `~/.local/bin/zj`, `~/.local/bin/wt`, `~/.local/bin/devbox-scaffold`, `~/.local/bin/devbox-reprov`, `~/.local/bin/devbox-doctor`) are the public surface.
@@ -172,6 +183,8 @@ claude-spawn --name <name> [--cwd <dir>] [--prompt-file <path>] [--resume <id>]
 - `devbox-reprov` is the human/agent-facing way to re-run the playbook locally on the VPS.
 - `devbox-doctor` is the read-only health check — runs in a few seconds, reports what's broken.
 - `claude-sessions` is the read-only live-session + worktree inventory (shared engine under `/sessions`, `/prune`, and the session-start ritual).
+- `claude-spawn` opens a new session in a Zellij tab (backs `/new-chat-session` + `/new-work-session`).
+- `claude-park` records a session's resume id then closes its tab (backs `/prune`).
 
 ## How to extend
 

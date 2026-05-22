@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# claude-park <session-name> — "park, not kill" a Claude session.
+#
+# Records the session's resume command to ~/.claude/parked-sessions.log
+# FIRST, then closes its Zellij tab. The close is reversible: the resume
+# command is logged, and the transcript persists on disk regardless, so a
+# parked session is always recoverable with `claude --resume <id>`.
+#
+# Used by the /prune skill (under per-item user confirmation) and fine to
+# call directly. Requires being inside a Zellij session.
+
+set -euo pipefail
+
+PARK_LOG="$HOME/.claude/parked-sessions.log"
+name="${1:-}"
+[[ -n "$name" ]]       || { echo "usage: claude-park <session-name>" >&2; exit 2; }
+[[ -n "${ZELLIJ:-}" ]] || { echo "claude-park: not inside a zellij session" >&2; exit 1; }
+
+# Find the live claude pid for this --remote-control name.
+pid=""
+while read -r p; do
+    [[ -d "/proc/$p" ]] || continue
+    if tr '\0' ' ' < "/proc/$p/cmdline" 2>/dev/null | grep -q -- "--remote-control $name"; then
+        pid="$p"; break
+    fi
+done < <(pgrep -x claude)
+[[ -n "$pid" ]] || { echo "claude-park: no live session named '$name'" >&2; exit 1; }
+
+# Resolve session id + cwd: prefer the sessions json, fall back to /proc + cmdline.
+sid=""; cwd=""
+f="$HOME/.claude/sessions/$pid.json"
+if [[ -f "$f" ]]; then
+    sid=$(jq -r '.sessionId // ""' "$f")
+    cwd=$(jq -r '.cwd // ""' "$f")
+else
+    cwd=$(readlink "/proc/$pid/cwd" 2>/dev/null || echo "?")
+    sid=$(tr '\0' '\n' < "/proc/$pid/cmdline" | grep -A1 -x -- '--resume' | tail -1)
+    [[ "$sid" == "--resume" ]] && sid=""
+fi
+
+# Record BEFORE closing — this is the whole point.
+if [[ -n "$sid" ]]; then
+    printf '%s\tname=%s\tcwd=%s\tresume=claude --resume %s\n' \
+        "$(date -Is)" "$name" "$cwd" "$sid" >> "$PARK_LOG"
+    echo "Parked '$name' → $PARK_LOG"
+    echo "  recover: claude --resume $sid"
+else
+    printf '%s\tname=%s\tcwd=%s\tresume=(unknown id; see ~/.claude/projects/%s/)\n' \
+        "$(date -Is)" "$name" "$cwd" "${cwd//\//-}" >> "$PARK_LOG"
+    echo "Parked '$name' → $PARK_LOG"
+    echo "  recover: open a session in $cwd and run /sessions, or check ~/.claude/projects/${cwd//\//-}/"
+fi
+
+# Now close the tab (kills the pane's claude process).
+if zellij action go-to-tab-name "$name" 2>/dev/null; then
+    zellij action close-tab 2>/dev/null && echo "  closed tab '$name'"
+    zellij action go-to-tab-name shell 2>/dev/null || true
+else
+    echo "  (no zellij tab named '$name' to close — process $pid may still be running; kill it manually if intended)" >&2
+fi
