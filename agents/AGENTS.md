@@ -54,6 +54,10 @@ The most-touched docs by change type:
 | Encrypted secret added or rotated | `docs/secrets.md` + the relevant integration doc |
 | Naming or path rename | grep across `docs/` + every `*/README.md` |
 
+## Build on what we learn — always be improving
+
+The devbox, its docs, and these agent rules are never "done." Whenever you spot a chance to make the workflow better — a repetitive manual step worth scripting, a recurring mistake worth a guardrail, something that belongs in an `AGENTS.md`/`CLAUDE.md` or a skill, a docs structure that's drifting, a convention worth codifying — **propose it to the user and ask their opinion.** Don't silently route around friction; don't unilaterally restructure load-bearing things either. Surface the idea, explain the *why*, and let them decide. The goal is compounding: every session should leave the system a little sharper than it found it, and key decisions should end up written down where they're easy to find again.
+
 ## Tools
 
 | Tool | What for |
