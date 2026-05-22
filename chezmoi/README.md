@@ -39,7 +39,8 @@ chezmoi/
         ├── executable_devbox-scaffold      → ~/.local/bin/devbox-scaffold     (chmod +x)
         ├── executable_devbox-reprov        → ~/.local/bin/devbox-reprov       (chmod +x)
         ├── executable_devbox-doctor        → ~/.local/bin/devbox-doctor       (chmod +x)
-        └── executable_claude-sessions      → ~/.local/bin/claude-sessions     (chmod +x)
+        ├── executable_claude-sessions      → ~/.local/bin/claude-sessions     (chmod +x)
+        └── executable_claude-spawn         → ~/.local/bin/claude-spawn        (chmod +x)
 ```
 
 ### `dot_bashrc`
@@ -151,6 +152,16 @@ claude-sessions
 ```
 
 This is the shared engine under the `/sessions` skill (which adds a per-session gist from the transcript), the `/prune` skill, and the session-start ritual. Crucially it surfaces each session's `claude --resume <id>` line — the recovery path if a tab is closed.
+
+### `dot_local/bin/executable_claude-spawn`
+
+Opens a new Claude session in a fresh Zellij tab (`claude --remote-control <name>`, so it shows up named in the phone app). Codifies the new-tab + inline-layout dance.
+
+```bash
+claude-spawn --name <name> [--cwd <dir>] [--prompt-file <path>] [--resume <id>]
+```
+
+`--prompt-file` appends a file's contents to the system prompt (how `/new-work-session` primes its clarify→worktree→code protocol); `--resume` recovers an existing session by id. Backs the `/new-chat-session` and `/new-work-session` skills. Requires being inside a Zellij session.
 
 ## Public API
 
