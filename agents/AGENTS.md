@@ -89,6 +89,17 @@ Use the `wt` wrapper, not raw git/gh, for the worktree → PR → merge lifecycl
 
 **Always** use `wt new` instead of `git worktree add`. **Always** use `wt pr` / `wt merge` instead of `gh pr create` / `gh pr merge`. They handle sync, rebase, and cleanup that's easy to forget manually.
 
+### Shared-branch work and commit discipline
+
+Worktrees are the default for anything that's a feature in its own right. But not all work is a feature — small, scattered chores (a doc tweak, a lint fix, a config bump, a one-line cleanup) don't each deserve a branch. For that kind of work we often have **multiple agents working concurrently on the same branch** (`main`/`master`). That makes the working tree a shared space where changes you didn't make can show up at any moment, so:
+
+- **Never commit blindly.** No `git add -A`, no `git add .`, no `git commit -a`. Another agent's in-flight edits live in the same tree, and a blind "take all" sweeps them into your commit. Always stage explicitly by path (`git add <file> …`) and run `git status` / `git diff --staged` to confirm you're committing only what you intend — nothing more.
+- **Prefer many small, targeted commits** over one fat one. Each commit should be a single coherent change with its own focused message. Small commits are easier to review, revert, and reason about, and they minimize the window where your staged set could collide with a co-worker agent's.
+
+### Clean before you push
+
+Code goes to remote **clean** — never push raw, unchecked work. Before `wt pr` (or any push), run the working repo's quality gate: **format, lint, and typecheck**, plus tests where the change warrants them. The exact commands are per-repo and defined in that repo's dev contract (its `.mise.toml` tasks / `CLAUDE.md`) — discover and run *those*, don't guess. For kost that's `oxfmt` (format) + `oxlint` (lint) + `tsgo` typecheck, all exposed as mise tasks. Fix what they flag before pushing; remote is not the first feedback loop. Markdown/doc-only changes don't need a typecheck, but still apply whatever formatting the repo enforces.
+
 ## Repository sync
 
 The VPS does **not** auto-pull repos on a schedule. Freshness is enforced at the moments where it matters:
