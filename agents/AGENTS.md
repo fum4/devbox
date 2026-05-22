@@ -4,6 +4,15 @@ You are running on a personal Hetzner Cloud VPS (Debian 12) -- the devbox -- use
 
 The VPS itself is provisioned declaratively from `~/code/devbox` (Ansible + chezmoi). When something looks misconfigured, look there first.
 
+## Session start ritual
+
+At the very start of every new session — before addressing the user's first request — do two things, in order:
+
+1. **Greet in an original, funny persona.** Pick a *different* voice each time and commit to it for a line or two — a medieval king, a hype rapper, a noir gumshoe, a pirate, a Shakespearean bard, a breathless sportscaster, a 1950s radio announcer, whatever feels fresh. Land the bit, then drop it. Don't reuse a persona you can tell you've used recently; keep it surprising.
+2. **Report the lay of the land.** Show the user every active Claude session and git worktree, each with a one-line "what it's about" (use the `/sessions` skill — don't trust session names alone, peek at the actual cwd/worktree/transcript). This way the user always knows what's running before diving in.
+
+Then proceed with the user's actual request. (This ritual is global across all repos, not just devbox.)
+
 ## Layout
 
 - **Repos**: `~/code/<project-name>/` (e.g. `~/code/kost`). Each is its own git repo.
@@ -75,7 +84,7 @@ Use the `wt` wrapper, not raw git/gh, for the worktree → PR → merge lifecycl
 | `wt merge [strategy]` | Merge the current worktree's PR (default `--squash`, `--delete-branch`) + remove worktree + delete local branch + pull `<default>` forward. |
 | `wt rm <task> [--force]` | Remove a worktree. Refuses unless the PR is MERGED (or `--force`). |
 | `wt list` | List worktrees in the current repo. |
-| `wt prune` | Sweep merged-PR worktrees across all repos. Cron runs this every 30 min. |
+| `wt prune` | Manually sweep merged-PR worktrees across all repos. **Not** automated — use the session-aware `/prune` skill instead for considered cleanup. |
 | `wt help` | Full reference. |
 
 **Always** use `wt new` instead of `git worktree add`. **Always** use `wt pr` / `wt merge` instead of `gh pr create` / `gh pr merge`. They handle sync, rebase, and cleanup that's easy to forget manually.
@@ -87,7 +96,7 @@ The VPS does **not** auto-pull repos on a schedule. Freshness is enforced at the
 - `wt new` fetches origin and branches from `origin/<default>` — the new worktree always starts from current state, no manual pull needed.
 - `wt pr` fetches and rebases — feature branch is current with `origin/<default>` before the PR opens. Conflicts surface to you as a normal rebase pause; resolve, `git rebase --continue`, re-run `wt pr`.
 - `wt merge` pulls the default branch forward after merge, leaving the main checkout current.
-- A 30-min `wt prune` cron sweeps worktrees whose PRs were merged outside `wt merge` (e.g., from the GitHub mobile UI). No action needed.
+- Worktree cleanup is **not** automated (no cron). A worktree whose PR merged outside `wt merge` lingers until you prune it deliberately via the `/prune` skill — which checks for live sessions and uncommitted work first, so it never orphans a session you're still using.
 
 If you find yourself wanting to `git pull` on a default branch manually, you don't need to — the next `wt new` or `wt merge` handles it. However, you can do it, if needed.
 
