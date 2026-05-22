@@ -38,7 +38,8 @@ chezmoi/
         ├── executable_wt                   → ~/.local/bin/wt                  (chmod +x)
         ├── executable_devbox-scaffold      → ~/.local/bin/devbox-scaffold     (chmod +x)
         ├── executable_devbox-reprov        → ~/.local/bin/devbox-reprov       (chmod +x)
-        └── executable_devbox-doctor        → ~/.local/bin/devbox-doctor       (chmod +x)
+        ├── executable_devbox-doctor        → ~/.local/bin/devbox-doctor       (chmod +x)
+        └── executable_claude-sessions      → ~/.local/bin/claude-sessions     (chmod +x)
 ```
 
 ### `dot_bashrc`
@@ -141,6 +142,16 @@ Exit code = number of failures (0 = healthy). Safe to wire into cron / CI as a s
 devbox-doctor
 ```
 
+### `dot_local/bin/executable_claude-sessions`
+
+Read-only inventory of every **live Claude session** + git worktree on the box — facts only, no LLM. Process-driven (`pgrep -x claude`), so it catches a session even when its `~/.claude/sessions/<pid>.json` is missing; enriches each with sessionId / cwd / status / last-active from that json when present. For each worktree it shows the branch, which session(s) sit in it, and the uncommitted-file count.
+
+```bash
+claude-sessions
+```
+
+This is the shared engine under the `/sessions` skill (which adds a per-session gist from the transcript), the `/prune` skill, and the session-start ritual. Crucially it surfaces each session's `claude --resume <id>` line — the recovery path if a tab is closed.
+
 ## Public API
 
 - The destination paths (`~/.bashrc`, `~/.config/zellij/config.kdl`, `~/.local/bin/zj`, `~/.local/bin/wt`, `~/.local/bin/devbox-scaffold`, `~/.local/bin/devbox-reprov`, `~/.local/bin/devbox-doctor`) are the public surface.
@@ -149,6 +160,7 @@ devbox-doctor
 - `devbox-scaffold` is the human/agent-facing way to scaffold a new repo's dev contract (`.mise.toml` + `zellij.kdl`).
 - `devbox-reprov` is the human/agent-facing way to re-run the playbook locally on the VPS.
 - `devbox-doctor` is the read-only health check — runs in a few seconds, reports what's broken.
+- `claude-sessions` is the read-only live-session + worktree inventory (shared engine under `/sessions`, `/prune`, and the session-start ritual).
 
 ## How to extend
 

@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+# claude-sessions — inventory of live Claude sessions + git worktrees on the
+# devbox. Facts only, no LLM. The /sessions and /prune skills layer
+# interpretation (transcript gist, prune candidacy) on top of this.
+#
+#   claude-sessions          human-readable report (default)
+#
+# Enumeration is process-driven: every live `claude` process is a session,
+# enriched from ~/.claude/sessions/<pid>.json when that file exists (it has
+# sessionId, cwd, status, updatedAt), and falling back to /proc + cmdline
+# when it doesn't (fresh sessions sometimes lack the json until first use).
+#
+# A session's transcript (for the /sessions gist) lives at:
+#   ~/.claude/projects/<cwd-with-slashes-as-dashes>/<sessionId>.jsonl
+
+set -u
+
+SESS_DIR="$HOME/.claude/sessions"
+PROJ_DIR="$HOME/.claude/projects"
+CODE_DIR="$HOME/code"
+NOW_S=$(date +%s)
+
+if [[ -t 1 ]]; then
+    BOLD=$'\e[1m'; DIM=$'\e[2m'; YEL=$'\e[33m'; RESET=$'\e[0m'
+else
+    BOLD=""; DIM=""; YEL=""; RESET=""
+fi
+
+tilde() { printf '%s' "${1/#$HOME/\~}"; }
+
+rel_time() {  # epoch-ms → "Nm ago"
+    local ms="$1" d
+    if [[ -z "$ms" || "$ms" == "0" || "$ms" == "null" ]]; then echo "?"; return; fi
+    d=$(( NOW_S - ms / 1000 ))
+    if   (( d < 60 ));    then echo "${d}s ago"
+    elif (( d < 3600 ));  then echo "$(( d / 60 ))m ago"
+    elif (( d < 86400 )); then echo "$(( d / 3600 ))h ago"
+    else echo "$(( d / 86400 ))d ago"; fi
+}
+
+# Emit one TSV line per live session: pid \t name \t status \t cwd \t updatedAt(ms) \t sessionId
+live_sessions() {
+    local pid f sid cwd status updated name cmdline pd hits transcript
+    while read -r pid; do
+        [[ -n "$pid" && -d "/proc/$pid" ]] || continue
+        cmdline=$(tr '\0' '\n' < "/proc/$pid/cmdline" 2>/dev/null)
+        name=$(printf '%s\n' "$cmdline" | grep -A1 -x -- '--remote-control' | tail -1)
+        [[ -n "$name" && "$name" != "--remote-control" ]] || name="(main)"
+        f="$SESS_DIR/$pid.json"
+        if [[ -f "$f" ]]; then
+            sid=$(jq -r '.sessionId // ""' "$f")
+            cwd=$(jq -r '.cwd // ""' "$f")
+            status=$(jq -r '.status // "?"' "$f")
+            updated=$(jq -r '.updatedAt // 0' "$f")
+        else
+            cwd=$(readlink "/proc/$pid/cwd" 2>/dev/null)
+            status="live"
+            updated=0
+            # session id: prefer an explicit --resume arg
+            sid=$(printf '%s\n' "$cmdline" | grep -A1 -x -- '--resume' | tail -1)
+            [[ "$sid" == "--resume" ]] && sid=""
+            # else, if the cwd's project dir has exactly one transcript, use it
+            if [[ -z "$sid" && -n "$cwd" ]]; then
+                pd="$PROJ_DIR/${cwd//\//-}"
+                if [[ -d "$pd" ]]; then
+                    hits=$(find "$pd" -maxdepth 1 -name '*.jsonl' 2>/dev/null)
+                    if [[ "$(printf '%s\n' "$hits" | grep -c .)" == "1" ]]; then
+                        sid=$(basename "$hits" .jsonl)
+                    fi
+                fi
+            fi
+            # last-active from transcript mtime if we resolved a sid
+            if [[ -n "$sid" ]]; then
+                transcript="$PROJ_DIR/${cwd//\//-}/$sid.jsonl"
+                [[ -f "$transcript" ]] && updated=$(( $(stat -c %Y "$transcript") * 1000 ))
+            fi
+        fi
+        printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$pid" "$name" "$status" "$cwd" "$updated" "${sid:-?}"
+    done < <(pgrep -x claude)
+}
+
+SESSIONS="$(live_sessions)"
+
+sessions_in() {  # names of sessions whose cwd == $1
+    printf '%s\n' "$SESSIONS" | awk -F'\t' -v p="$1" '$4 == p { printf "%s ", $2 }'
+}
+
+echo "${BOLD}ACTIVE CLAUDE SESSIONS${RESET}"
+if [[ -z "$SESSIONS" ]]; then
+    echo "  (none)"
+else
+    while IFS=$'\t' read -r pid name status cwd updated sid; do
+        [[ -z "$pid" ]] && continue
+        branch=""
+        if git -C "$cwd" rev-parse --git-dir >/dev/null 2>&1; then
+            branch=$(git -C "$cwd" symbolic-ref --quiet --short HEAD 2>/dev/null || echo "detached")
+        fi
+        printf '\n  %s●%s %s%s%s  %s%s · %s%s\n' \
+            "$YEL" "$RESET" "$BOLD" "$name" "$RESET" "$DIM" "$status" "$(rel_time "$updated")" "$RESET"
+        printf '      cwd:    %s%s\n' "$(tilde "$cwd")" "${branch:+  [$branch]}"
+        printf '      resume: %sclaude --resume %s%s\n' "$DIM" "$sid" "$RESET"
+    done <<< "$SESSIONS"
+fi
+
+echo
+echo "${BOLD}WORKTREES${RESET}"
+{
+    for repo in "$CODE_DIR"/*/; do
+        repo="${repo%/}"
+        [[ -e "$repo/.git" ]] || continue
+        git -C "$repo" worktree list --porcelain 2>/dev/null | awk '
+            /^worktree /{wt=$2}
+            /^branch /{sub("refs/heads/","",$2); br=$2}
+            /^detached/{br="detached"}
+            /^$/{if(wt){print wt"\t"br; wt="";br=""}}
+            END{if(wt)print wt"\t"br}'
+    done | sort -u
+} | while IFS=$'\t' read -r wt br; do
+    [[ -z "$wt" ]] && continue
+    here=$(sessions_in "$wt")
+    dirty=$(git -C "$wt" status --porcelain 2>/dev/null | wc -l)
+    if [[ -n "$here" ]]; then
+        note="session: ${here% }"
+    else
+        note="${DIM}no live session${RESET}"
+    fi
+    (( dirty > 0 )) && note="$note · ${YEL}⚠ $dirty uncommitted${RESET}"
+    printf '  %-30s %s%-12s%s %s\n' "$(tilde "$wt")" "$DIM" "[$br]" "$RESET" "$note"
+done
+
+echo
+echo "${DIM}tip: /sessions adds a one-line gist per session; /prune flags stale ones.${RESET}"

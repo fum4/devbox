@@ -78,6 +78,8 @@ The `description` is the most important field — both agents use it to decide w
 
 | Skill | Triggers on |
 |---|---|
+| [`sessions`](skills/sessions/) | `/sessions` or "what's running" — inventory of every live Claude session + worktree, each with a one-line gist from the *transcript* (not the name). Backs the session-start ritual. Built on the `claude-sessions` helper. |
+| [`help`](skills/help/) | `/help` — list all available skills + one-line descriptions. |
 | [`parallel-work`](skills/parallel-work/) | Starting a new unrelated feature, parallel work, separate bug — guides the agent to use `wt new` for worktrees. |
 | [`clone-repo`](skills/clone-repo/) | Cloning / setting up / starting work on a new GitHub repo on the devbox — clone, inspect, propose `devbox-scaffold`, wait for approval, scaffold, open workspace. |
 | [`run-app`](skills/run-app/) | Running / starting / stopping / restarting / checking the dev servers for the current repo/worktree — inspects what's bound, identifies which worktree owns each process, asks before killing competing servers. |

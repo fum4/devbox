@@ -154,5 +154,7 @@ Per-repo specifics (architecture layers, naming, file-size limits) live in that 
 | Clone + set up a new repo | use the `clone-repo` skill — clones from `github.com/fum4/<repo>` by default, proposes `devbox-scaffold` args, waits for user confirmation |
 | Apply devbox changes (role/chezmoi/skill/AGENTS.md edits) | `devbox-reprov` (or `devbox-reprov --check --diff` for a dry-run; `--tags <role>` for one role) |
 | Health-check the box | `devbox-doctor` |
+| See active sessions + worktrees | `/sessions` skill (or the `claude-sessions` helper for raw facts) |
+| List available skills | `/help` skill |
 
 For when to use a worktree (and when not), the `parallel-work` skill in `~/.agents/skills/parallel-work/SKILL.md` has the full decision tree. For onboarding a new repo onto the devbox, the `clone-repo` skill walks through clone → inspect → confirm → scaffold.
