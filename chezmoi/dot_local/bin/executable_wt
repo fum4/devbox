@@ -31,13 +31,14 @@ wt — worktree + PR + merge helper for the devbox.
 
 USAGE
   wt new <task>           Branch a worktree from origin/<default> into ../<repo>-<task>
-  wt squad <task>         wt new + open a new zellij tab running `claude` in the worktree
   wt pr [gh-args…]        Rebase + force-push-with-lease + gh pr create
   wt merge [strategy]     Merge PR (default --squash, --delete-branch) + clean up worktree
   wt rm <task> [--force]  Remove a worktree. Refuses unless PR is MERGED (or --force).
-  wt list                 List worktrees in the current repo.
-  wt prune                Manually sweep merged-PR worktrees across ~/code/* (prefer the /prune skill — it's session-aware).
   wt help                 Show this help.
+
+  For listing worktrees use `git worktree list`. To spawn a worktree-backed
+  session use the /new-work-session skill; to clean up stale worktrees use the
+  session-aware /prune skill — both build on the commands above.
 
 CONVENTIONS
   task    short kebab-case slug (e.g. auth-fix, receipt-ocr)
@@ -67,44 +68,6 @@ cmd_new() {
     echo "Worktree: $wt_path"
     echo "Branch:   $task (from origin/$default)"
     echo "Next:     cd $wt_path"
-}
-
-cmd_squad() {
-    local task="${1:-}"
-    [[ -z "$task" ]] && die "usage: wt squad <task>"
-    is_in_repo || die "not inside a git repo"
-    [[ -z "${ZELLIJ:-}" ]] && die "not inside a zellij session — start one with 'zj <project>' first"
-    command -v zellij >/dev/null || die "zellij not on PATH"
-
-    # Create the worktree (same as 'wt new').
-    cmd_new "$task"
-
-    local repo_root wt_path layout_tmp
-    repo_root=$(git rev-parse --show-toplevel)
-    wt_path="${repo_root}-${task}"
-
-    # Spawn a new zellij tab with `claude --remote-control` running in the
-    # worktree. The --remote-control flag explicitly registers the session
-    # with the named remote-control bridge so it surfaces in the phone's
-    # Claude app session list right away. bash -ic so mise activates first.
-    layout_tmp=$(mktemp --suffix=.kdl)
-    cat > "$layout_tmp" <<EOF
-layout {
-    pane {
-        command "bash"
-        args "-ic" "claude --remote-control '${task}'"
-    }
-}
-EOF
-
-    zellij action new-tab --name "$task" --cwd "$wt_path" --layout "$layout_tmp"
-
-    # zellij reads the layout synchronously; the 2s background unlink is paranoid cleanup.
-    ( sleep 2 && rm -f "$layout_tmp" ) &
-
-    echo
-    echo "Spawned claude in zellij tab '$task' (cwd: $wt_path)."
-    echo "Refresh your phone's Claude app — the new session will appear in the list."
 }
 
 cmd_pr() {
@@ -200,42 +163,6 @@ cmd_rm() {
     echo "Removed worktree: $wt_path"
 }
 
-cmd_list() {
-    is_in_repo || die "not inside a git repo"
-    git worktree list
-}
-
-cmd_prune() {
-    # Idempotent: sweep all repos in ~/code/, remove worktrees whose PR is MERGED.
-    # Designed to run from cron.
-    shopt -s nullglob
-    local repo main_in_repo
-    for repo in "$HOME"/code/*/; do
-        repo="${repo%/}"
-        [[ -d "$repo/.git" ]] || continue
-
-        # Operate only when we're on the canonical main checkout for this repo
-        main_in_repo=$(git -C "$repo" worktree list --porcelain | awk '/^worktree /{print $2; exit}')
-        [[ "$main_in_repo" != "$repo" ]] && continue
-
-        git -C "$repo" worktree list --porcelain \
-            | awk '/^worktree /{wt=$2} /^branch refs\/heads\//{print wt, substr($2, 12)}' \
-            | while read -r wt_path branch; do
-                  [[ "$wt_path" == "$main_in_repo" ]] && continue
-                  local merged_count
-                  merged_count=$(gh -R "$(git -C "$repo" config --get remote.origin.url \
-                                          | sed -E 's|.*[:/]([^/]+/[^/]+)(\.git)?$|\1|; s|\.git$||')" \
-                                 pr list --head "$branch" --state merged --json number --jq 'length' 2>/dev/null || echo 0)
-                  if [[ "${merged_count:-0}" -gt 0 ]]; then
-                      echo "[wt prune] $(basename "$repo"): removing $wt_path (branch $branch merged)"
-                      if git -C "$repo" worktree remove "$wt_path" 2>/dev/null; then
-                          git -C "$repo" branch -D "$branch" 2>/dev/null || true
-                      fi
-                  fi
-              done
-    done
-}
-
 # ----- dispatch -----
 
 cmd="${1:-help}"
@@ -243,12 +170,9 @@ shift 2>/dev/null || true
 
 case "$cmd" in
     new)            cmd_new "$@" ;;
-    squad)          cmd_squad "$@" ;;
     pr)             cmd_pr "$@" ;;
     merge)          cmd_merge "$@" ;;
     rm)             cmd_rm "$@" ;;
-    list)           cmd_list ;;
-    prune)          cmd_prune ;;
     help|--help|-h) cmd_help ;;
     *)              die "unknown command: $cmd (try 'wt help')" ;;
 esac

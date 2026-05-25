@@ -96,12 +96,10 @@ wt new <task>            # branch ../<repo>-<task> from origin/<default>
 wt pr [gh-args…]         # rebase + force-push-with-lease + gh pr create
 wt merge [strategy]      # merge PR (default --squash) + clean up worktree
 wt rm <task> [--force]   # remove a worktree (refuses unless PR is MERGED)
-wt list                  # list worktrees in the current repo
-wt prune                 # manually sweep merged-PR worktrees across ~/code/*
 wt help                  # full reference
 ```
 
-Pruning is **not** automated — the `/prune` skill is the session-aware way to clean up (it checks for live sessions + uncommitted work before removing anything). `wt prune` remains as a lower-level manual command.
+`wt` is the deterministic core — four commands, human- and agent-usable, with safety gates baked in. The judgment layer lives in skills that compose these: list worktrees with `git worktree list`; clean up stale ones with the session-aware **`/prune`** skill (parks live sessions + checks for uncommitted work first); spawn a worktree-backed session with **`/new-work-session`**.
 
 ### `dot_local/bin/executable_devbox-scaffold`
 

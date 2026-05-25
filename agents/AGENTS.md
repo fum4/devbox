@@ -87,9 +87,9 @@ Use the `wt` wrapper, not raw git/gh, for the worktree → PR → merge lifecycl
 | `wt pr [gh-args…]` | Fetch + rebase on `origin/<default>` + `git push --force-with-lease` + `gh pr create`. Pauses on conflicts. |
 | `wt merge [strategy]` | Merge the current worktree's PR (default `--squash`, `--delete-branch`) + remove worktree + delete local branch + pull `<default>` forward. |
 | `wt rm <task> [--force]` | Remove a worktree. Refuses unless the PR is MERGED (or `--force`). |
-| `wt list` | List worktrees in the current repo. |
-| `wt prune` | Manually sweep merged-PR worktrees across all repos. **Not** automated — use the session-aware `/prune` skill instead for considered cleanup. |
 | `wt help` | Full reference. |
+
+`wt` is the deterministic core; the judgment layer lives in skills. List worktrees with `git worktree list`. To clean up stale worktrees use the session-aware **`/prune`** skill (parks live sessions, checks for uncommitted work). To spawn a worktree-backed session use **`/new-work-session`**. Both build on the commands above rather than duplicating the git plumbing.
 
 **Always** use `wt new` instead of `git worktree add`. **Always** use `wt pr` / `wt merge` instead of `gh pr create` / `gh pr merge`. They handle sync, rebase, and cleanup that's easy to forget manually.
 
@@ -148,6 +148,7 @@ Per-repo specifics (architecture layers, naming, file-size limits) live in that 
 - **Per-repo dev contract**: each repo's `.mise.toml` (tasks) and `zellij.kdl` (workspace) are the source of truth for "how to run this project." Add them when scaffolding a new repo. Every `.mise.toml` should define a `[tasks.setup]` — the first-time install command (`pnpm install`, `cargo fetch`, etc.). The `repos` Ansible role runs it for every cloned repo on every fresh provision, so a rebuilt devbox comes up with all dependencies installed.
 - **The VPS is ephemeral.** Anything not in git or in `~/code/devbox/` is at risk on rebuild. Don't store load-bearing state outside these. See "Source of truth" above for where each kind of change belongs.
 - **Long-running processes** go in Zellij tabs, not bare SSH sessions. Otherwise they die when SSH drops.
+- **Name new sessions for the work, never a counter.** When spawning a session (`/new-chat-session`, `/new-work-session`, `claude-spawn`), do **not** auto-generate generic names like `kost-1`, `kost-2` — they make the session list impossible to map back to what each is for. If the purpose is clear from context, name it after that (`reports`, `ocr-eval`, `auth-refactor`); if it isn't, **ask the user what to call it** before spawning. A unique, descriptive name is required (it's both the tab name and the remote-control name).
 - **Globals via mise, not npm/pnpm**: don't install global npm/pnpm packages. Add them as `[tools]` in a repo's `.mise.toml`.
 - **Don't edit chezmoi-managed files directly**: `~/.bashrc`, `~/.config/zellij/config.kdl`, `~/.local/bin/*`. Edit `~/code/devbox/chezmoi/` and `chezmoi apply` (or run the ansible role).
 - **New tools go through Ansible**: don't `apt install X` ad-hoc. Add a role in `~/code/devbox/ansible/roles/` so the VPS stays reproducible.
