@@ -6,14 +6,29 @@
   args:
     creates: /usr/local/bin/chezmoi
 
-- name: Sync chezmoi source → ~/.local/share/chezmoi/ (the default source dir)
-  copy:
-    src: "{{ playbook_dir }}/../chezmoi/"
-    dest: "/home/{{ devbox_user }}/.local/share/chezmoi/"
+# chezmoi's default source dir is ~/.local/share/chezmoi. We point it straight
+# at the repo via a symlink (not a copy) so editing chezmoi/<file> in the repo
+# is instantly live on `chezmoi apply` — no stale intermediate copy to re-sync,
+# and the documented "edit source → chezmoi apply" loop actually holds.
+- name: Stat the chezmoi source dir
+  ansible.builtin.stat:
+    path: "/home/{{ devbox_user }}/.local/share/chezmoi"
+  register: chezmoi_src
+
+- name: Remove a legacy copied chezmoi source dir (one-time migration to symlink)
+  ansible.builtin.file:
+    path: "/home/{{ devbox_user }}/.local/share/chezmoi"
+    state: absent
+  when: chezmoi_src.stat.exists and chezmoi_src.stat.isdir and not chezmoi_src.stat.islnk
+
+- name: Symlink chezmoi source dir → the devbox repo's chezmoi/
+  ansible.builtin.file:
+    src: "{{ (playbook_dir ~ '/../chezmoi') | realpath }}"
+    dest: "/home/{{ devbox_user }}/.local/share/chezmoi"
+    state: link
+    force: true
     owner: "{{ devbox_user }}"
     group: "{{ devbox_user }}"
-    mode: preserve
-  become: true
 
 - name: Apply chezmoi (idempotent; --force overwrites Debian-stock dotfiles)
   command: chezmoi apply --force

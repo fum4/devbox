@@ -23,7 +23,7 @@ Each role does one concern. Roles run in the order in `site.yml`:
 | 13 | `github-identity` | Decrypt age-encrypted GitHub SSH key + PAT (`secrets/github-*.age`), install on VPS, `gh auth login --with-token` | Bootstrap once per laptop (see `docs/github.md`); skipped silently if secrets absent. Runs before `repos` so SSH-cloning works. |
 | 14 | `repos` | Clone every line of `repos.txt` to `~/code/<basename>`, then `mise install` + `mise run setup` per repo | Includes the devbox repo itself, so `~/code/devbox/` is on disk before `agents` symlinks at it. |
 | 15 | `agents` | Symlink `~/.agents/{AGENTS.md,README.md,skills}` → `~/code/devbox/agents/`, then point `~/.claude/` + `~/.codex/` agent paths at `~/.agents/` | Must run *after* `repos` — symlink targets are paths inside the devbox checkout. |
-| 16 | `dotfiles` | Install chezmoi, `chezmoi init --apply --source=../chezmoi` | Needs the user, mise activated, all tools in place |
+| 16 | `dotfiles` | Install chezmoi, **symlink** `~/.local/share/chezmoi` → the repo's `chezmoi/`, then `chezmoi apply --force` | Needs the user + the devbox repo on disk (runs after `repos`). Symlink (not copy) so repo edits are instantly live on `chezmoi apply`. |
 
 ## Prerequisites
 
