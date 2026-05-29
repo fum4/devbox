@@ -106,6 +106,7 @@ ansible-playbook -i inventory.ini site.yml
 | `claude-squad` | parallel-agent TUI |
 | `process-compose` | binary |
 | `docker` | Docker Engine + Compose plugin |
+| `playwright-deps` | apt libs for Chromium headless-shell (kost `tools/preview/`, future e2e) |
 | `ntfy` | CLI (dormant) |
 | `agents` | symlink `~/.agents/` → repo |
 | `dotfiles` | chezmoi apply |

@@ -1,0 +1,19 @@
+---
+# playwright-deps — apt packages required to run Chromium (headless shell) via
+# Playwright on the devbox. Used by `tools/preview/` in the kost repo (and any
+# future browser-driven test suite) — Playwright itself manages the *browser
+# binary* in the user-level cache (~/.cache/ms-playwright), but the binary
+# needs these system libs to start.
+#
+# The list is a snapshot of `playwright install-deps chromium-headless-shell`
+# on Debian 13. When Playwright bumps and adds a new dep, the install becomes
+# non-idempotent — diagnose with:
+#
+#     ~/code/kost/node_modules/.bin/playwright install-deps chromium-headless-shell --dry-run
+#
+# and add the missing packages to vars/main.yml. Keep the list alphabetised.
+
+- name: Install Chromium headless-shell system deps (Playwright)
+  ansible.builtin.apt:
+    name: "{{ playwright_chromium_apt_packages }}"
+    state: present
