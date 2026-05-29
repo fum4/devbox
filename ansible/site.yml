@@ -40,6 +40,9 @@
     - role: docker              # Docker engine + Compose plugin (for local infra stacks)
       tags: [docker, tools]
 
+    - role: playwright-deps     # apt libs for Chromium headless-shell (kost mobile-preview, future e2e)
+      tags: [playwright-deps, tools]
+
     - role: ntfy                # ntfy CLI (dormant; no integrations yet)
       tags: [ntfy, tools]
 
