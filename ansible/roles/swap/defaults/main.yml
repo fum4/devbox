@@ -1,0 +1,7 @@
+---
+# A small swapfile so cgroup MemoryHigh can throttle gracefully instead of
+# bouncing straight into hard OOM. Sized as a safety mat, not as RAM extension.
+swap_file: /swapfile
+swap_size: 2G
+# Default 60 is too eager for our workload; only swap under real pressure.
+swap_swappiness: 10

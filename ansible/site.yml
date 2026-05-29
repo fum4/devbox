@@ -16,6 +16,9 @@
     - role: hardening           # disable root SSH + password auth, ufw
       tags: [hardening, bootstrap]
 
+    - role: swap                # 2G swapfile + vm.swappiness=10 (lets cgroup MemoryHigh throttle gracefully)
+      tags: [swap, bootstrap]
+
     - role: tailscale           # install + bring up (needs $TAILSCALE_AUTHKEY)
       tags: [tailscale, bootstrap]
 

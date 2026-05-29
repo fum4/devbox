@@ -97,6 +97,7 @@ ansible-playbook -i inventory.ini site.yml
 |---|---|
 | `base` | apt update, base packages, `fum4` user, sudoers, copy SSH key |
 | `hardening` | disable root SSH + password auth, ufw |
+| `swap` | 2G swapfile + `vm.swappiness=10` (safety mat for cgroup `MemoryHigh` throttling) |
 | `tailscale` | install + OAuth-mint single-use key + `tailscale up --ssh` |
 | `runtimes` | mise (per-project Node/Bun/pnpm) |
 | `agent-tools` | ripgrep, fd, jq, gh |
