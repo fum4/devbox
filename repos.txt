@@ -21,4 +21,3 @@
 
 fum4/devbox
 fum4/kost
-fum4/madeira-hikes
