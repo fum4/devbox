@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# claude-trust — mark workspace(s) as trusted in ~/.claude.json so Claude Code
+# sessions started there skip the workspace-trust dialog.
+#
+#   claude-trust <path>...   trust specific paths
+#   claude-trust --all       trust every git repo + worktree under ~/code/
+#
+# Why this exists: Claude Code has NO global "trust all workspaces" setting —
+# trust is stored per-exact-path as
+#   .projects["<abs-path>"].hasTrustDialogAccepted = true
+# in ~/.claude.json, and is never inherited by subdirectories or worktrees. An
+# untrusted workspace blocks the trust dialog, which (for a spawned/headless
+# session nobody attaches to) means it never finishes startup and never
+# registers with Remote Control — so it never appears in the phone app.
+#
+# This seeds that flag idempotently. It's wired into `claude-spawn` and
+# `wt new` so freshly-created sessions/worktrees are auto-trusted, and can be
+# run with --all to trust everything currently on the box.
+
+set -euo pipefail
+
+CLAUDE_JSON="$HOME/.claude.json"
+CODE_DIR="$HOME/code"
+
+paths=()
+if [[ "${1:-}" == "--all" ]]; then
+    shopt -s nullglob
+    for repo in "$CODE_DIR"/*/; do
+        repo="${repo%/}"
+        [[ -e "$repo/.git" ]] || continue
+        while read -r wt; do [[ -n "$wt" ]] && paths+=("$wt"); done \
+            < <(git -C "$repo" worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2}')
+    done
+else
+    [[ $# -gt 0 ]] || { echo "usage: claude-trust <path>... | --all" >&2; exit 2; }
+    for p in "$@"; do paths+=("$(readlink -f "$p" 2>/dev/null || echo "$p")"); done
+fi
+
+[[ -f "$CLAUDE_JSON" ]] || echo '{}' > "$CLAUDE_JSON"
+
+# Dedupe.
+mapfile -t paths < <(printf '%s\n' "${paths[@]}" | awk 'NF' | sort -u)
+
+trusted=0
+for p in "${paths[@]}"; do
+    # Skip if already trusted (avoids a needless rewrite + race with live claudes).
+    if [[ "$(jq -r --arg p "$p" '.projects[$p].hasTrustDialogAccepted // false' "$CLAUDE_JSON" 2>/dev/null)" == "true" ]]; then
+        continue
+    fi
+    tmp=$(mktemp)
+    jq --arg p "$p" '.projects[$p] = ((.projects[$p] // {}) + {hasTrustDialogAccepted: true})' \
+        "$CLAUDE_JSON" > "$tmp" && mv "$tmp" "$CLAUDE_JSON"
+    echo "trusted: $p"
+    trusted=$((trusted + 1))
+done
+
+if (( trusted == 0 )); then
+    echo "claude-trust: nothing to do (${#paths[@]} path(s) already trusted)"
+fi
