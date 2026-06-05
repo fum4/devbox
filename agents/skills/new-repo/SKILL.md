@@ -1,13 +1,15 @@
 ---
 name: new-repo
-description: Create a brand-new GitHub repo under fum4/, clone it locally, scaffold the devbox dev contract (`.mise.toml` + `zellij.kdl`), wire it into `devbox/repos.txt` so rebuilds reclone it, trust the workspace, and spawn a Claude session in it. Trigger on "/new-repo", "create a new repo", "scaffold a new project", "make a new GitHub repo for X", "start a new repo and a session in it". Use this when the repo does NOT yet exist on GitHub; use `/clone-repo` when it already does.
+description: Create a brand-new GitHub repo under fum4/, clone it locally, scaffold the devbox dev contract (`.mise.toml` + `zellij.kdl`), wire it into `devbox/repos.txt` so rebuilds reclone it, and spawn a Claude session in it. Trigger on "/new-repo", "create a new repo", "scaffold a new project", "make a new GitHub repo for X", "start a new repo and a session in it". Use this when the repo does NOT yet exist on GitHub; use `/clone-repo` when it already does.
 ---
 
 # /new-repo — create + scaffold + spawn
 
-End state: `fum4/<name>` exists on GitHub, is cloned to `~/code/<name>` with a scaffolded dev contract committed and pushed, is tracked in `~/code/devbox/repos.txt` so rebuilds reclone it, is trusted in `~/.claude.json` so Remote Control registers cleanly, and a fresh Claude session is running in it — driveable from the phone.
+End state: `fum4/<name>` exists on GitHub, is cloned to `~/code/<name>` with a scaffolded dev contract committed and pushed, is tracked in `~/code/devbox/repos.txt` so rebuilds reclone it, and a fresh Claude session is running in it — driveable from the phone.
 
 Use `/clone-repo` if the repo already exists on GitHub.
+
+> **No trust step needed.** Claude Code's trust check walks parent directories — `$HOME` is already trusted in `~/.claude.json`, so anything under `~/code/` inherits. Spawned sessions in fresh `~/code/<name>` paths register with Remote Control directly.
 
 ## Steps
 
@@ -50,24 +52,12 @@ Use `/clone-repo` if the repo already exists on GitHub.
    - Append `fum4/<name>` (keep alphabetical if existing lines are).
    - Commit + push in the devbox repo: `chore(repos): track fum4/<name>`.
 
-7. **Trust the workspace** so the spawned session doesn't block on Claude's trust dialog (this is the symptom that motivated the helper in the first place — see `chezmoi/dot_local/bin/executable_claude-trust`):
-   ```bash
-   if command -v claude-trust >/dev/null; then
-       claude-trust ~/code/<name>
-   else
-       tmp=$(mktemp)
-       jq --arg p "$HOME/code/<name>" \
-          '.projects[$p] = ((.projects[$p] // {}) + {hasTrustDialogAccepted: true})' \
-          ~/.claude.json > "$tmp" && mv "$tmp" ~/.claude.json
-   fi
-   ```
-
-8. **Spawn the session**:
+7. **Spawn the session**:
    ```bash
    claude-spawn --name <name> --cwd ~/code/<name>
    ```
 
-9. **Report back**: GitHub URL (`gh repo view fum4/<name> --json url -q .url`), local path, reminder to refresh the phone Claude app — it'll appear in ~10s.
+8. **Report back**: GitHub URL (`gh repo view fum4/<name> --json url -q .url`), local path, reminder to refresh the phone Claude app — it'll appear in ~10s.
 
 ## Rules
 
@@ -75,5 +65,4 @@ Use `/clone-repo` if the repo already exists on GitHub.
 - **Never `gh repo create` without `--description`.** Empty descriptions are a smell on personal repos; ask if the user didn't supply one.
 - **Never auto-name with a counter** (`project-1`, `app-2`). The name doubles as session + tab name; demand something meaningful. AGENTS.md rule.
 - **Don't skip step 6 (repos.txt).** A repo not listed survives on GitHub but vanishes on the next devbox rebuild — silent drift.
-- **Don't skip step 7 (trust).** Without it the new session hangs on the trust dialog, never registers with Remote Control, never appears on the phone.
 - **Don't auto-recover from pre-flight failures.** Existing `~/code/<name>` or existing `fum4/<name>` mean something the user needs to decide about — stop and ask.
