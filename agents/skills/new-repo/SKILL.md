@@ -9,7 +9,7 @@ End state: `fum4/<name>` exists on GitHub, is cloned to `~/code/<name>` with a s
 
 Use `/clone-repo` if the repo already exists on GitHub.
 
-> **No trust step needed.** Claude Code's trust check walks parent directories — `$HOME` is already trusted in `~/.claude.json`, so anything under `~/code/` inherits. Spawned sessions in fresh `~/code/<name>` paths register with Remote Control directly.
+> **No trust step needed.** Claude Code's trust check walks parent directories — `~/code` is trusted (`hasTrustDialogAccepted: true`) in `~/.claude.json`, so anything underneath inherits. Spawned sessions in fresh `~/code/<name>` paths register with Remote Control directly. If a session ever spawns and shows `live · ?` in `claude-sessions` with no resume id, the trust dialog is blocking startup — verify `jq '.projects["/home/fum4/code"].hasTrustDialogAccepted'` is `true` (not just present).
 
 ## Steps
 

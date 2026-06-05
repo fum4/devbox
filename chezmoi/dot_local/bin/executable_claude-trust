@@ -14,14 +14,16 @@
 #
 # How trust actually resolves (verified against Claude Code 2.1.x binary):
 # the trust flag (`.projects["<abs-path>"].hasTrustDialogAccepted`) IS
-# inherited from any ancestor dir — Claude walks the path tree upward until
-# it hits one with the flag set. So trusting `$HOME` once covers everything
-# under it. This script honors that: if any ancestor of <path> is already
-# trusted, it does nothing for that <path>.
+# inherited from any ancestor dir whose flag is set to `true` — Claude walks
+# the path tree upward until it finds one. So trusting `~/code` once with
+# `hasTrustDialogAccepted: true` covers every repo and worktree underneath.
+# This script honors that: if any ancestor of <path> has the flag set to
+# true, it does nothing for that <path>.
 #
-# (Earlier versions of this header claimed trust was strictly per-exact-path —
-# that was wrong. Verified 2026-06-05 by reading the trust-check function in
-# the Claude binary; it walks parents.)
+# IMPORTANT gotcha: a `.projects["<path>"]` entry can exist with
+# `hasTrustDialogAccepted: false` (Claude adds skeleton entries for paths it's
+# touched, with the flag default-false). Such an entry does NOT count as
+# trust — only `true` does. Checking `.projects | keys` will mislead you.
 #
 # This script seeds the flag idempotently. Safe to call from `claude-spawn`,
 # `wt new`, or by hand. With --all, traverses ~/code/ once.
