@@ -20,4 +20,5 @@
 # every new devbox.
 
 fum4/devbox
+fum4/easyskills
 fum4/kost
