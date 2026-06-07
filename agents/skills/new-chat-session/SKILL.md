@@ -9,7 +9,12 @@ Open a fresh Claude session the user can drive from the phone. No worktree, no t
 
 ## Steps
 
-1. Decide the **cwd** (which repo) and a short, unique **name** (it's both the remote-control name and the tab name). Default the cwd to the current repo if it's obvious; only ask if ambiguous. Run `claude-sessions` first to avoid a name that collides with an existing tab/session.
+1. Decide the **cwd** and a short, unique **name** (the name is both the remote-control name and the tab name). Run `claude-sessions` first to avoid a name that collides with an existing tab/session.
+
+   **cwd rules:**
+   - Brainstorm tied to an existing repo's feature/integration → that repo's cwd (e.g. a kost feature → `~/code/kost`).
+   - **Pre-repo brainstorm** (no commitment yet on whether code gets written or where it lives) → `~/code/` itself. Don't park it in a sibling repo just for company — the cwd implies project context that isn't there, and a later "let's make this real" needs a respawn. `~/code/` is the honest default for "we haven't decided yet."
+   - When ambiguous, ask.
 2. Spawn it:
    ```bash
    claude-spawn --name <name> --cwd <cwd>
