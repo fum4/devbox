@@ -17,6 +17,7 @@
       - htop
       - unzip
       - tmux
+      - ffmpeg # compose e2e per-flow videos into one side-by-side, persona-labeled clip
     state: present
 
 - name: Create user {{ devbox_user }}
