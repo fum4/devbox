@@ -1,31 +1,47 @@
 #!/usr/bin/env bash
 # claude-spawn — open a new Claude session in a fresh Zellij tab.
 #
-#   claude-spawn --name <name> [--cwd <dir>] [--prompt-file <path>] [--resume <id>]
+#   claude-spawn --name <name> [--cwd <dir>] [--prompt-file <path>] \
+#                              [--resume <id>] [--permission-mode <mode>]
 #
 # The session is started with `--remote-control <name>` so it shows up in the
 # phone Claude app, named. Used by the /new-chat-session and /new-work-session
 # skills; also fine to call directly.
 #
-#   --cwd          working directory for the session (default: $PWD)
-#   --prompt-file  file whose contents are appended to the system prompt
-#                  (how /new-work-session primes its clarify→worktree→code protocol)
-#   --resume       resume an existing session by id (recovery)
+#   --cwd              working directory for the session (default: $PWD)
+#   --prompt-file      file whose contents are appended to the system prompt
+#                      (how /new-work-session primes its clarify→worktree→code
+#                      protocol)
+#   --resume           resume an existing session by id (recovery)
+#   --permission-mode  Claude's permission posture for this session — one of
+#                      default / acceptEdits / bypassPermissions / plan.
+#                      DEFAULT: bypassPermissions. We want spawned sessions
+#                      under ~/code/ to run without per-tool prompts so the
+#                      phone-driven flow asks about *what* to build, not
+#                      whether each Bash call is allowed. Override with
+#                      `--permission-mode plan` for a no-edits session, or
+#                      `default` to opt back into the prompts.
 #
 # Requires being inside a Zellij session.
 
 set -euo pipefail
 
-name=""; cwd="$PWD"; prompt_file=""; resume=""
+name=""; cwd="$PWD"; prompt_file=""; resume=""; permission_mode="bypassPermissions"
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --name)        name="${2:-}"; shift 2 ;;
-        --cwd)         cwd="${2:-}"; shift 2 ;;
-        --prompt-file) prompt_file="${2:-}"; shift 2 ;;
-        --resume)      resume="${2:-}"; shift 2 ;;
+        --name)            name="${2:-}"; shift 2 ;;
+        --cwd)             cwd="${2:-}"; shift 2 ;;
+        --prompt-file)     prompt_file="${2:-}"; shift 2 ;;
+        --resume)          resume="${2:-}"; shift 2 ;;
+        --permission-mode) permission_mode="${2:-}"; shift 2 ;;
         *) echo "claude-spawn: unknown argument '$1'" >&2; exit 2 ;;
     esac
 done
+
+case "$permission_mode" in
+    default|acceptEdits|bypassPermissions|plan) ;;
+    *) echo "claude-spawn: invalid --permission-mode '$permission_mode' (expected default|acceptEdits|bypassPermissions|plan)" >&2; exit 2 ;;
+esac
 
 [[ -n "$name" ]]              || { echo "claude-spawn: --name is required" >&2; exit 2; }
 [[ -n "${ZELLIJ:-}" ]]        || { echo "claude-spawn: not inside a zellij session (start one with 'zj <project>')" >&2; exit 1; }
@@ -37,7 +53,7 @@ command -v zellij >/dev/null  || { echo "claude-spawn: zellij not on PATH" >&2; 
 # is single-quoted; the prompt file is read at runtime via $(cat ...) rather
 # than embedded, so its contents never have to survive the KDL/bash quoting
 # layers. The \" become literal quotes once KDL parses the args string.
-ccmd="claude --remote-control '$name'"
+ccmd="claude --remote-control '$name' --permission-mode '$permission_mode'"
 [[ -n "$resume" ]]      && ccmd+=" --resume '$resume'"
 [[ -n "$prompt_file" ]] && ccmd+=" --append-system-prompt \\\"\$(cat '$prompt_file')\\\""
 
