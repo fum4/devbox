@@ -45,6 +45,7 @@ Not a docs flow — use the `clone-repo` skill on the devbox itself. Either tell
 | [`github.md`](github.md) | First-time, or rotating secrets | Age-encrypted SSH key + PAT in the repo, public key registered on GitHub |
 | [`provisioning.md`](provisioning.md) | Every VPS provision | Fully configured VPS, agents driveable from phone |
 | [`mobile.md`](mobile.md) | New phone, or after reinstall | Tailscale + Claude + Expo Go ready |
+| [`sessions.md`](sessions.md) | Anyone hosting agent sessions or dev servers | How sessions (systemd+dtach) and dev servers (process-compose) are supervised; spawn / attach / restore / migrate |
 | [`recovery.md`](recovery.md) | Incident response | Symptom → cause → fix matrix |
 
 ## Things NOT in this directory
