@@ -1,0 +1,37 @@
+# Claude agent session, supervised by systemd. One instance per session; the
+# instance name (%i) == the Remote-Control name == the dashboard tab name.
+# Spawned via `claude-spawn` (writes the EnvironmentFile, then `systemctl --user
+# start claude@<name>`). See ~/code/devbox/docs/sessions.md.
+[Unit]
+Description=Claude agent session: %i
+
+[Service]
+# Aggregate resource ceiling for all agent sessions lives on the slice.
+Slice=claude.slice
+# Per-session knobs written by claude-spawn: SESSION_ID, CWD, PERM_MODE,
+# APPEND_PROMPT_FILE. Missing file => start fails loudly (intended).
+EnvironmentFile=%h/.config/claude-sessions/%i.env
+# The launcher is the unit's MAIN process: it supervises a dtach child that holds
+# the PTY for `claude`, so it can exit 0 on an intentional stop and non-zero only
+# on a real crash (dtach alone can't distinguish those). Remote Control and an
+# interactive `dtach -a` both work through the dtach PTY.
+ExecStart=%h/.local/bin/claude-session-run %i
+# On stop, SIGTERM the main process only; the launcher forwards to dtach/claude
+# and exits cleanly. Stragglers get SIGKILLed after the timeout.
+KillMode=mixed
+TimeoutStopSec=20
+# Resume-same on crash: the launcher re-attaches to the pinned SESSION_ID, so a
+# crashed agent comes back as the *same* conversation, not a blank one. A clean
+# stop or quit exits 0 => no restart; a real crash exits non-zero => restart.
+Restart=on-failure
+RestartSec=2
+# Per-agent soft cap: throttle/swap one bloated session (a 1M-context Opus
+# session can be heavy) before it pressures its siblings. The hard ceiling is
+# the slice's MemoryMax.
+MemoryHigh=3G
+
+[Install]
+# Not enabled at boot by design (auto-resuming a fleet mid-task is unsafe — see
+# docs/sessions.md "Boot policy"). Present so `systemctl --user enable` works if
+# ever wanted; restore-after-reboot is the `claude-restore` helper's job.
+WantedBy=default.target

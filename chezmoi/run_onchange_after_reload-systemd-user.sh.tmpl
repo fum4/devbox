@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Reload the systemd *user* manager whenever the Claude session units change, so
+# `chezmoi apply` in an interactive session picks up edits immediately. The
+# hashes below make chezmoi re-run this only when a unit's content changes.
+#
+#   claude@.service: {{ include "dot_config/systemd/user/claude@.service" | sha256sum }}
+#   claude.slice:    {{ include "dot_config/systemd/user/claude.slice" | sha256sum }}
+#
+# Tolerant of the no-user-bus case (e.g. `chezmoi apply` run under Ansible
+# become_user without a login session): claude-spawn also daemon-reloads before
+# every start, so units are never stale at spawn time regardless.
+systemctl --user daemon-reload 2>/dev/null || true
