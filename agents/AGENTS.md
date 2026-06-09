@@ -18,7 +18,9 @@ Then proceed with the user's actual request. (This ritual is global across all r
 - **Repos**: `~/code/<project-name>/` (e.g. `~/code/kost`). Each is its own git repo.
 - **VPS infra source**: `~/code/devbox`.
 - **Cross-agent home**: `~/code/devbox/agents/` — `./AGENTS.md` (this file) and `./skills/` (loaded on demand).
-- **Workspaces**: Zellij sessions, one per project. Launch with `zj <project>`.
+- **Agent sessions**: each is a systemd user unit `claude@<name>.service` (durable, isolated, phone-driveable). Spawn with `claude-spawn`, restore after a reboot with `claude-restore`. See [`docs/sessions.md`](../docs/sessions.md).
+- **Dev servers**: per-project `process-compose` stacks, on-demand, run via `/serve`.
+- **Dashboards**: `zj <project>` opens a *disposable* Zellij view onto a project's live sessions + dev servers — it hosts nothing, so killing it loses nothing.
 
 ## Source of truth: the devbox repo
 
@@ -63,7 +65,8 @@ The devbox, its docs, and these agent rules are never "done." Whenever you spot 
 | Tool | What for |
 |---|---|
 | **mise** | Per-project Node/Bun/pnpm versions + tasks + env (`.mise.toml`). Always prefer `mise run <task>` over guessing commands. |
-| **Zellij** | Workspace persistence. Per-project `zellij.kdl` layout. |
+| **systemd (user) + dtach** | Hosts agent sessions: `claude@<name>.service` holds a `dtach` PTY. Durable across SSH drops/reboots, isolated per-session. Managed via `claude-spawn` / `claude-restore` / `claude-park`, not by hand. See [`docs/sessions.md`](../docs/sessions.md). |
+| **Zellij** | **Disposable dashboard viewer** (`zj <project>`) onto live sessions (`dtach -a`) + dev servers. Hosts nothing long-lived — not a process supervisor. |
 | **Claude Code** + **Codex CLI** | Both honor this AGENTS.md and the shared skills. |
 | **Claude Squad** (`cs`) | TUI for parallel agents on git worktrees. |
 | **Tailscale** | Private mesh. Use tailnet IPs (`100.x.y.z`), never the public IP. |
@@ -73,7 +76,7 @@ The devbox, its docs, and these agent rules are never "done." Whenever you spot 
 | **`devbox-reprov`** | Re-run the Ansible playbook locally on the devbox (`git pull` then `ansible-playbook --connection=local`). Use this after editing a role/chezmoi source to apply changes without needing the laptop. Pass `--check --diff` for dry-run, `--tags <role>` for a narrow re-run. |
 | **`devbox-doctor`** | Read-only health check for the box (binaries on PATH, Tailscale + SSH, docker, agent-layer symlinks, repo cleanliness, free disk + memory). Run after a `devbox-reprov` to smoke-test, or any time things feel off. Exit code = number of failures. |
 | **ripgrep** (`rg`), **fd**, **jq** | Search and JSON parsing. Prefer over `grep -r` / `find` / `python -m json.tool`. |
-| **process-compose** | Headless service orchestration (Postgres, Redis, workers). Not for TUIs. |
+| **process-compose** | Per-project dev-server stacks (API, Metro, infra) — on-demand, restart-fresh, run via `/serve` on a `pc-<project>.sock` UDS. Also fine for headless backing services (Postgres, Redis, workers). |
 | **ntfy** | Push notifications to phone (installed dormant — `curl -d "msg" ntfy.sh/$NTFY_TOPIC` once a topic is wired). |
 | **chezmoi** | Dotfile manager. Source lives in `~/code/devbox/chezmoi/`. |
 
@@ -154,12 +157,12 @@ Per-repo specifics (architecture layers, naming, file-size limits) live in that 
 
 - **Don't `sudo`** unless necessary. `fum4` has NOPASSWD sudo but day-to-day work doesn't need it.
 - **Don't expose anything to the public internet.** All inbound traffic except SSH is firewalled; reach dev servers over Tailscale.
-- **Per-repo dev contract**: each repo's `.mise.toml` (tasks) and `zellij.kdl` (workspace) are the source of truth for "how to run this project." Add them when scaffolding a new repo. Every `.mise.toml` should define a `[tasks.setup]` — the first-time install command (`pnpm install`, `cargo fetch`, etc.). The `repos` Ansible role runs it for every cloned repo on every fresh provision, so a rebuilt devbox comes up with all dependencies installed.
+- **Per-repo dev contract**: each repo's `.mise.toml` (tasks) and, for its dev servers, a `process-compose.yaml` (the stack `/serve` runs) are the source of truth for "how to run this project." Add them when scaffolding a new repo. Every `.mise.toml` should define a `[tasks.setup]` — the first-time install command (`pnpm install`, `cargo fetch`, etc.). The `repos` Ansible role runs it for every cloned repo on every fresh provision, so a rebuilt devbox comes up with all dependencies installed.
 - **The VPS is ephemeral.** Anything not in git or in `~/code/devbox/` is at risk on rebuild. Don't store load-bearing state outside these. See "Source of truth" above for where each kind of change belongs.
-- **Long-running processes** go in Zellij tabs, not bare SSH sessions. Otherwise they die when SSH drops.
-- **Name new sessions for the work, never a counter.** When spawning a session (`/new-chat-session`, `/new-work-session`, `claude-spawn`), do **not** auto-generate generic names like `kost-1`, `kost-2` — they make the session list impossible to map back to what each is for. If the purpose is clear from context, name it after that (`reports`, `ocr-eval`, `auth-refactor`); if it isn't, **ask the user what to call it** before spawning. A unique, descriptive name is required (it's both the tab name and the remote-control name).
+- **Long-running processes get a real supervisor, never a bare SSH session or a Zellij pane** (both die on disconnect / viewer-death). Agent sessions → systemd via `claude-spawn`; dev servers → process-compose via `/serve`. See [`docs/sessions.md`](../docs/sessions.md).
+- **Name new sessions for the work, never a counter.** When spawning a session (`/new-chat-session`, `/new-work-session`, `claude-spawn`), do **not** auto-generate generic names like `kost-1`, `kost-2` — they make the session list impossible to map back to what each is for. If the purpose is clear from context, name it after that (`reports`, `ocr-eval`, `auth-refactor`); if it isn't, **ask the user what to call it** before spawning. A unique, descriptive name is required (it's the systemd instance, the Remote-Control name, and the dashboard tab — one name, everywhere).
 - **Globals via mise, not npm/pnpm**: don't install global npm/pnpm packages. Add them as `[tools]` in a repo's `.mise.toml`.
-- **Don't edit chezmoi-managed files directly**: `~/.bashrc`, `~/.config/zellij/config.kdl`, `~/.local/bin/*`. Edit `~/code/devbox/chezmoi/` and `chezmoi apply` (or run the ansible role).
+- **Don't edit chezmoi-managed files directly**: `~/.bashrc`, `~/.config/zellij/config.kdl`, `~/.config/systemd/user/claude@.service`, `~/.local/bin/*`. Edit `~/code/devbox/chezmoi/` and `chezmoi apply` (or run the ansible role).
 - **New tools go through Ansible**: don't `apt install X` ad-hoc. Add a role in `~/code/devbox/ansible/roles/` so the VPS stays reproducible.
 - **Verify latest version before installing or pinning.** Before adding any versioned dependency — apt / pip / npm / cargo / brew package, GitHub Action, container image, binary release — check the *current* latest stable. Use `gh api repos/<owner>/<repo>/releases/latest --jq '.tag_name'`, the package registry, or the project's release page. Don't lean on remembered version numbers; the gap between "I last checked" and "now" is usually months and sometimes years. Pin to actual-latest in the same commit, and re-check on every revisit.
 - **GitHub identity is age-encrypted**: this VPS's GitHub SSH key (`~/.ssh/github-ssh`) and the `gh` CLI auth come from `ansible/secrets/github-*.age`, decrypted on the laptop during provisioning. Don't manually `gh auth login` or `ssh-keygen` for GitHub — those changes get clobbered on re-provision and the devbox loses its persistent identity. See `~/code/devbox/docs/github.md` for the rotation procedure.
@@ -169,9 +172,12 @@ Per-repo specifics (architecture layers, naming, file-size limits) live in that 
 
 | Goal | How |
 |---|---|
-| List active workspaces | `zellij ls` |
-| Open / attach a project | `zj <project>` |
-| Detach from a workspace | `Ctrl+O` then `d` |
+| Open a project dashboard | `zj <project>` (disposable view: live agents + dev servers) |
+| Detach from a dashboard | `Ctrl+O` then `d` (a dtach pane: `Ctrl+\`) |
+| Spawn an agent session | `claude-spawn --name <name> --cwd <dir>` |
+| Restore sessions after a reboot | `claude-restore` (list) · `claude-restore <name>` / `--all` |
+| Park (stop) a session, keep the conversation | `claude-park <name>` |
+| List dashboards | `zellij ls` |
 | Run a task | `mise run <task>` (after `cd <repo>`) |
 | List tasks for current repo | `mise tasks` |
 | Start new unrelated work | `wt new <task>` (creates worktree branched from `origin/<default>`) |
