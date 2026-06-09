@@ -1,11 +1,22 @@
 #!/bin/bash
-# zj — open or attach to a zellij workspace for a project.
+# zj — open a **disposable dashboard** onto a project's live work.
 #
-#   zj            list all running zellij sessions
-#   zj <project>  attach if session "<project>" exists,
-#                 otherwise create it from ~/code/<project>/zellij.kdl
+#   zj            list running dashboards (zellij sessions)
+#   zj <project>  attach the "<project>" dashboard if it exists, else generate a
+#                 fresh one: one tab per live agent session (dtach -a into the
+#                 systemd-supervised claude@<name>), a "services" tab attaching the
+#                 project's process-compose dev-server stack, and a shell.
+#
+# The dashboard owns NOTHING: agent sessions live under systemd (claude@*.service),
+# dev servers under process-compose (via /serve). Kill or restart this Zellij
+# session freely — nothing stateful dies with it. Detach a dtach pane with Ctrl-\,
+# detach the whole Zellij with Ctrl-O then d. See ~/code/devbox/docs/sessions.md.
 
 set -u
+
+CODE_DIR="$HOME/code"
+CONF_DIR="$HOME/.config/claude-sessions"
+RT="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 
 if [ -z "${1:-}" ]; then
     zellij list-sessions 2>/dev/null
@@ -13,23 +24,65 @@ if [ -z "${1:-}" ]; then
 fi
 
 PROJECT="$1"
-DIR="$HOME/code/$PROJECT"
+DIR="$CODE_DIR/$PROJECT"
+[ -d "$DIR" ] || { echo "zj: directory $DIR does not exist" >&2; exit 1; }
 
-if [ ! -d "$DIR" ]; then
-    echo "zj: directory $DIR does not exist" >&2
-    exit 1
-fi
-
-# Strip ANSI codes from `zellij list-sessions` before matching the name.
+# Already have a dashboard for this project? Attach it.
 if zellij list-sessions 2>/dev/null \
    | sed "s/\x1b\[[0-9;]*m//g" \
    | grep -qE "^${PROJECT}([[:space:]]|\$)"; then
     exec zellij attach "$PROJECT"
 fi
 
-cd "$DIR" || exit 1
-if [ -f "zellij.kdl" ]; then
-    exec zellij -n zellij.kdl -s "$PROJECT"
-else
-    exec zellij -s "$PROJECT"
+# Collect the live (active) agent sessions belonging to this project: a session
+# belongs if its CWD's first path segment under ~/code is <project> or a worktree
+# of it (<project>-<task>).
+agent_tabs=""
+if [ -d "$CONF_DIR" ]; then
+    for f in "$CONF_DIR"/*.env; do
+        [ -e "$f" ] || continue
+        name="$(basename "$f" .env)"
+        cwd="$(sed -n 's/^CWD=//p' "$f")"
+        [ -n "$cwd" ] || continue
+        rel="${cwd#"$CODE_DIR"/}"; top="${rel%%/*}"
+        [ "$top" = "$PROJECT" ] || [ "${top#"$PROJECT"-}" != "$top" ] || continue
+        systemctl --user --quiet is-active "claude@${name}.service" 2>/dev/null || continue
+        sock="$RT/claude-${name}.sock"
+        # dtach -a attaches; if the socket vanished, show why instead of a blank pane.
+        cmd="if [ -S '$sock' ]; then exec dtach -a '$sock'; else echo 'session ${name} is not running (systemctl --user status claude@${name})'; exec bash; fi"
+        agent_tabs="${agent_tabs}    tab name=\"${name}\" {
+        pane {
+            command \"bash\"
+            args \"-ic\" \"${cmd}\"
+        }
+    }
+"
+    done
 fi
+
+# Services tab: attach the project's process-compose stack if /serve has it up.
+pc_sock="$RT/pc-${PROJECT}.sock"
+svc_cmd="if [ -S '$pc_sock' ]; then exec process-compose attach -U -u '$pc_sock'; else echo 'no dev servers running — start them with /serve'; exec bash; fi"
+
+layout="$(mktemp --suffix=.kdl)"
+{
+    echo 'layout {'
+    echo '    default_tab_template {'
+    echo '        pane size=1 borderless=true { plugin location="zellij:tab-bar" }'
+    echo '        children'
+    echo '        pane size=2 borderless=true { plugin location="zellij:status-bar" }'
+    echo '    }'
+    echo '    tab name="shell" focus=true'
+    printf '%s' "$agent_tabs"
+    echo "    tab name=\"services\" {"
+    echo '        pane {'
+    echo '            command "bash"'
+    echo "            args \"-ic\" \"${svc_cmd}\""
+    echo '        }'
+    echo '    }'
+    echo '}'
+} > "$layout"
+
+( sleep 5; rm -f "$layout" ) &
+cd "$DIR" || exit 1
+exec zellij -n "$layout" -s "$PROJECT"
