@@ -15,3 +15,20 @@
   args:
     creates: "/home/{{ devbox_user }}/.local/bin/claude"
   become_user: "{{ devbox_user }}"
+
+# Agent sessions run as systemd *user* units (claude@<name>.service, deployed via
+# chezmoi). Linger keeps the user manager running at boot independent of any login,
+# so sessions survive SSH drops / reboots. See docs/sessions.md.
+- name: Enable linger for the devbox user (user systemd manager runs at boot)
+  ansible.builtin.command: "loginctl enable-linger {{ devbox_user }}"
+  args:
+    creates: "/var/lib/systemd/linger/{{ devbox_user }}"
+
+# Per-session env files (SESSION_ID/CWD/…) written by claude-spawn live here.
+- name: Ensure the claude-sessions config dir exists
+  ansible.builtin.file:
+    path: "/home/{{ devbox_user }}/.config/claude-sessions"
+    state: directory
+    owner: "{{ devbox_user }}"
+    group: "{{ devbox_user }}"
+    mode: "0700"
