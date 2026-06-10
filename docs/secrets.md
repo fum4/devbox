@@ -119,6 +119,58 @@ The four directives that matter:
 
 The `.gitignore` already whitelists `ansible/secrets/*.age`, so the encrypted file commits but plaintext drops never do.
 
+## Project secrets — enrolling a repo
+
+The store above holds the *devbox's own* identity secrets, but the rule is
+universal (and codified in `agents/AGENTS.md`): **no secret on this box may exist
+only as gitignored plaintext in a repo's working tree.** That plaintext dies on a
+rebuild and vanishes if the laptop is lost — the same drift trap as a hand-edited
+live config. Every project that accumulates secrets enrolls them here instead, so
+the one root of trust (your age key, in the password manager) recovers everything.
+
+The pattern, mirroring `github-identity` / `expo-identity`:
+
+1. Encrypt each secret as `ansible/secrets/<repo>-<name>.age` (see *Adding a new
+   encrypted secret* above).
+2. Write a per-repo role (`<repo>-secrets` / `<repo>-identity`) that decrypts on
+   the laptop (`delegate_to: localhost`, `no_log: true`) and **places the
+   gitignored files** the repo's dev/deploy contract expects — `.env`s, tfvars,
+   SSH keys — onto the box, the way `github-identity` writes `~/.ssh/github-ssh`.
+3. Add the role to the play and a row to the inventory table above.
+
+The payoff: those files stop being hand-crafted load-bearing state. A rebuilt
+devbox regenerates them from the encrypted source on provision; a lost laptop is
+recovered by restoring the age key from the password manager.
+
+> **Foundation (independent of any repo):** the password manager must hold the
+> **age private key** *and* the **provider account logins + 2FA recovery codes**
+> (Cloudflare, Hetzner, Vercel, Clerk, OpenRouter, GitHub, …). Those account
+> logins are the true root — regenerating any token assumes you can still log in.
+
+### Pending: kost infra secrets
+
+kost's bootstrap secrets currently live only as gitignored plaintext on the
+devbox — the first repo to enroll. Decision + rationale recorded 2026-06-10
+(chosen over SOPS-in-repo and a managed secret manager: both duplicate or
+over-build vs this age store). kost's app *runtime* secrets are already durable
+(Coolify's encrypted DB + the nightly R2 backup bundle that carries `APP_KEY`),
+so only the **infra set** is the gap:
+
+| To encrypt → `ansible/secrets/` | Plaintext | Role places it at |
+|---|---|---|
+| `kost-hcloud-token.age` | Hetzner API token | `~/code/kost/infra/terraform/terraform.tfvars` |
+| `kost-vercel-token.age` | Vercel API token | ↑ same tfvars |
+| `kost-r2-backup.age` | R2 `kost-backup` key id + secret | tfvars **and** `infra/terraform/.r2-backend.env` |
+| `kost-vps-ssh.age` | `kost_vps` private key | `~/.ssh/kost_vps` (mode 0600) |
+| `kost-coolify-appkey.age` | Coolify `APP_KEY` (recovery copy) | — (recovery only; Coolify stays the runtime source) |
+
+Open choices for the implementing session: role name (`kost-secrets` vs
+`kost-identity`); whether to also enroll the dev env files (`apps/api/.env`,
+`apps/mobile/.env.local`) so a fresh box can `mise run dev`, not just deploy (also
+retires the per-worktree env-copy chore); and a re-encrypt step in kost's token-
+rotation runbook so `kost-coolify-appkey.age` can't drift. kost-side context:
+`~/code/kost/docs/runbooks/disaster-recovery.md`.
+
 ## Decrypting for verification or debugging
 
 Sometimes you just want to read a secret (rotate it, debug, sanity-check that the right value is in there).
