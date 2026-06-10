@@ -67,7 +67,7 @@ If all three decrypt cleanly, you're done — laptop is ready to run Ansible.
 | `ansible/secrets/github-ssh.age` | OpenSSH ed25519 private key | `github-identity` role → `~/.ssh/github-ssh` on VPS | Yes (the VPS needs to use the key for git ops) |
 | `ansible/secrets/github-pat.age` | GitHub PAT (`ghp_…`) | `github-identity` role → piped into `gh auth login --with-token` | Yes (stored at `~/.config/gh/hosts.yml`) |
 | `ansible/secrets/tailscale-oauth.age` | Tailscale OAuth `client_secret` (`tskey-client-…`) | `tailscale` role → exchanged for an access token, used to mint a single-use auth key | **No** — only the minted key reaches the VPS |
-| `ansible/secrets/expo-token.age` | EAS access token (`EXPO_TOKEN`) | `expo-identity` role → `export EXPO_TOKEN=…` in `~/.bashrc.local`. CI reads its own GitHub Actions secret, synced from this token (`gh secret set`). See [`expo.md`](expo.md). | Yes (at rest in `~/.bashrc.local`, mode 0600) |
+| `ansible/secrets/expo-kost.age` | EAS access token (`EXPO_TOKEN`, robot `kost-eas`) | `expo-identity` role → `export EXPO_TOKEN=…` in `~/.bashrc.local`. CI reads its own GitHub Actions secret, synced from this token (`gh secret set`). See [`expo.md`](expo.md). | Yes (at rest in `~/.bashrc.local`, mode 0600) |
 
 Why four secrets, two patterns: the OAuth `client_secret` is more powerful than the keys it mints, so we keep it on the controller. The GitHub PAT and SSH key are what the VPS actually needs in operation, so they have to live there. See [the PAT/OAuth explainer](#why-the-different-shapes) below.
 

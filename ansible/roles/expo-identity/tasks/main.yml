@@ -3,7 +3,12 @@
 # interactive `eas` / `bunx eas-cli` on the VPS authenticate without an
 # interactive `eas login` (which doesn't survive a rebuild).
 #
-#   ansible/secrets/expo-token.age  →  export EXPO_TOKEN=... in ~/.bashrc.local
+#   ansible/secrets/expo-kost.age  →  export EXPO_TOKEN=... in ~/.bashrc.local
+#
+# Single-app assumption: one Expo app (kost) → one global EXPO_TOKEN. EAS hardcodes
+# the env var name, so a SECOND app can't also export EXPO_TOKEN globally — at that
+# point switch to per-repo wiring (each repo's .mise.toml sets EXPO_TOKEN from its
+# own ~/.config/expo/<app>.token). See docs/expo.md "Multiple Expo apps".
 #
 # Decrypted on the CONTROLLER (your laptop) using devbox/secrets.local (the age
 # private key, gitignored). The VPS never sees the age private key. CI does NOT
@@ -18,7 +23,7 @@
 
 - name: Check for encrypted Expo token
   stat:
-    path: "{{ playbook_dir }}/secrets/expo-token.age"
+    path: "{{ playbook_dir }}/secrets/expo-kost.age"
   register: expo_secret
   delegate_to: localhost
   become: false
@@ -34,13 +39,13 @@
   debug:
     msg: >-
       EXPO_TOKEN not installed
-      ({{ 'expo-token.age missing' if not expo_secret.stat.exists
+      ({{ 'expo-kost.age missing' if not expo_secret.stat.exists
           else 'secrets.local missing on controller' }}).
       Bootstrap on the laptop per docs/expo.md, or use `eas login` interactively.
   when: not (expo_secret.stat.exists and expo_age_key.stat.exists)
 
 - name: Decrypt Expo token on the controller
-  command: age -d -i {{ playbook_dir }}/../secrets.local {{ playbook_dir }}/secrets/expo-token.age
+  command: age -d -i {{ playbook_dir }}/../secrets.local {{ playbook_dir }}/secrets/expo-kost.age
   register: expo_token
   delegate_to: localhost
   become: false

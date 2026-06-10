@@ -20,7 +20,7 @@ interactive login entirely.
 
 | Consumer | How it gets the token |
 |---|---|
-| **VPS interactive shell** (`bunx eas-cli@latest …` over Termius/Zellij) | `expo-identity` role decrypts `expo-token.age` on the laptop and writes `export EXPO_TOKEN=…` into `~/.bashrc.local` (mode 0600, sourced by `~/.bashrc`). |
+| **VPS interactive shell** (`bunx eas-cli@latest …` over Termius/Zellij) | `expo-identity` role decrypts `expo-kost.age` on the laptop and writes `export EXPO_TOKEN=…` into `~/.bashrc.local` (mode 0600, sourced by `~/.bashrc`). |
 | **GitHub Actions** (`build-mobile.yml`, `update-mobile.yml`) | A repo-level Actions secret `EXPO_TOKEN`. Actions can't read the age store, so it's synced separately with `gh secret set`. |
 
 The `.age` file is the **canonical source**; the Actions secret is a synced copy.
@@ -35,12 +35,28 @@ land at rest on the VPS (in `~/.bashrc.local`) — like the GitHub PAT does — 
 attacker with root on the box could read it. Scope it accordingly when you create
 it (an EAS access token can be revoked independently at any time).
 
+## Multiple Expo apps
+
+EAS CLI always reads the env var **`EXPO_TOKEN`** — you can't scope by var name.
+So scope by **secret + robot** instead: one `expo-<app>.age` and one robot
+`<app>-eas` per app. With a single app today, the `expo-identity` role exports
+`EXPO_TOKEN` globally in `~/.bashrc.local`. When a **second** app arrives, two
+apps can't share one global var — switch to **per-repo** wiring (each repo's
+`.mise.toml` sets `EXPO_TOKEN` from its own `~/.config/expo/<app>.token`). Until
+then, global is simplest.
+
 ## One-time bootstrap (on your laptop)
 
 ### 1. Create the EAS access token
 
-expo.dev → **Account settings → Access tokens → Create token**. Copy it (you
-only see it once).
+expo.dev → **Account settings → Access tokens**. Either:
+
+- **Robot user** (recommended for CI — scoped, not tied to a person): *Add robot*
+  → name it **`kost-eas`** → role **Admin** (needs build + submit + update) →
+  *Create token*; or
+- **Personal access token**: *Create token* at the top of the page.
+
+Copy it — shown only once.
 
 ### 2. Encrypt it into the repo
 
@@ -48,9 +64,9 @@ only see it once).
 cd ~/_work/devbox
 AGE_PUB=$(grep -o 'age1[0-9a-z]*' secrets.local | head -1)
 read -rs EXPO_TOKEN                         # paste the token — not echoed, not in history
-printf '%s' "$EXPO_TOKEN" | age -r "$AGE_PUB" -o ansible/secrets/expo-token.age
+printf '%s' "$EXPO_TOKEN" | age -r "$AGE_PUB" -o ansible/secrets/expo-kost.age
 unset EXPO_TOKEN
-git add ansible/secrets/expo-token.age && git commit -m "chore(secrets): add expo-token"
+git add ansible/secrets/expo-kost.age && git commit -m "chore(secrets): add expo-kost"
 ```
 
 ### 3. Install it on the VPS
@@ -83,7 +99,7 @@ bunx eas-cli@latest whoami                  # prints the Expo account
 ## Rotation
 
 Revoke the old token at expo.dev, then repeat steps 1–4 with a new one
-(re-encrypt overwrites `expo-token.age`; re-run the role; re-set the CI secret).
+(re-encrypt overwrites `expo-kost.age`; re-run the role; re-set the CI secret).
 
 ## Before bootstrap — using EAS from the phone right now
 
