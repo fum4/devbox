@@ -1,30 +1,26 @@
 ---
-# Install the EAS access token (EXPO_TOKEN) from an age-encrypted secret so
-# interactive `eas` / `bunx eas-cli` on the VPS authenticate without an
-# interactive `eas login` (which doesn't survive a rebuild).
+# Install EAS access tokens (EXPO_TOKEN) from age-encrypted, PER-APP secrets so
+# `eas` / `bunx eas-cli` authenticate without an interactive login that dies on a
+# rebuild. Per-app from the start:
 #
-#   ansible/secrets/expo-kost.age  →  export EXPO_TOKEN=... in ~/.bashrc.local
+#   ansible/secrets/expo-<app>.age  →  ~/.config/expo/<app>.token   (mode 0600)
 #
-# Single-app assumption: one Expo app (kost) → one global EXPO_TOKEN. EAS hardcodes
-# the env var name, so a SECOND app can't also export EXPO_TOKEN globally — at that
-# point switch to per-repo wiring (each repo's .mise.toml sets EXPO_TOKEN from its
-# own ~/.config/expo/<app>.token). See docs/expo.md "Multiple Expo apps".
+# EAS hardcodes the EXPO_TOKEN env-var name, so two apps can't share one global
+# export. Instead each app's repo wires its own token via mise (its .mise.toml
+# reads ~/.config/expo/<app>.token into EXPO_TOKEN). This role just lays down the
+# per-app token files. See docs/expo.md.
 #
-# Decrypted on the CONTROLLER (your laptop) using devbox/secrets.local (the age
-# private key, gitignored). The VPS never sees the age private key. CI does NOT
-# read this — GitHub Actions has its own `EXPO_TOKEN` secret, synced from the
-# same token with `gh secret set` (the .age file is the canonical source).
-#
-# See docs/expo.md for the one-time bootstrap (create token → encrypt → sync CI).
-#
-# Skips gracefully when the secret OR secrets.local is missing — e.g. a
-# VPS-local `devbox-reprov`, which has no age private key. A token installed by
-# a prior laptop provision persists in ~/.bashrc.local across such reprovisions.
+# Decrypted on the CONTROLLER (laptop) via secrets.local; the VPS never sees the
+# age private key. Skips gracefully when there are no secrets OR secrets.local is
+# absent (e.g. a VPS-local devbox-reprov). Token files from a prior laptop
+# provision persist in ~/.config/expo across such runs. CI uses its own GitHub
+# Actions secret, not these files.
 
-- name: Check for encrypted Expo token
-  stat:
-    path: "{{ playbook_dir }}/secrets/expo-kost.age"
-  register: expo_secret
+- name: Find encrypted per-app Expo tokens
+  find:
+    paths: "{{ playbook_dir }}/secrets"
+    patterns: "expo-*.age"
+  register: expo_secrets
   delegate_to: localhost
   become: false
 
@@ -35,43 +31,28 @@
   delegate_to: localhost
   become: false
 
-- name: Notice — Expo token unavailable, skipping expo-identity
+- name: Notice — Expo tokens unavailable, skipping expo-identity
   debug:
     msg: >-
-      EXPO_TOKEN not installed
-      ({{ 'expo-kost.age missing' if not expo_secret.stat.exists
+      No EXPO tokens installed
+      ({{ 'no expo-*.age secrets' if expo_secrets.matched == 0
           else 'secrets.local missing on controller' }}).
       Bootstrap on the laptop per docs/expo.md, or use `eas login` interactively.
-  when: not (expo_secret.stat.exists and expo_age_key.stat.exists)
+  when: expo_secrets.matched == 0 or not expo_age_key.stat.exists
 
-- name: Decrypt Expo token on the controller
-  command: age -d -i {{ playbook_dir }}/../secrets.local {{ playbook_dir }}/secrets/expo-kost.age
-  register: expo_token
-  delegate_to: localhost
-  become: false
-  no_log: true
-  changed_when: false
-  when: expo_secret.stat.exists and expo_age_key.stat.exists
-
-- name: Ensure ~/.bashrc.local exists with tight perms
+- name: Ensure ~/.config/expo exists
   file:
-    path: "/home/{{ devbox_user }}/.bashrc.local"
-    state: touch
+    path: "/home/{{ devbox_user }}/.config/expo"
+    state: directory
     owner: "{{ devbox_user }}"
     group: "{{ devbox_user }}"
-    mode: "0600"
-    modification_time: preserve
-    access_time: preserve
-  when: expo_secret.stat.exists and expo_age_key.stat.exists
+    mode: "0700"
+  when: expo_secrets.matched > 0 and expo_age_key.stat.exists
 
-- name: Install EXPO_TOKEN into the interactive shell env
-  blockinfile:
-    path: "/home/{{ devbox_user }}/.bashrc.local"
-    marker: "# {mark} EXPO_TOKEN (managed by devbox/expo-identity role)"
-    block: |
-      export EXPO_TOKEN="{{ expo_token.stdout }}"
-    owner: "{{ devbox_user }}"
-    group: "{{ devbox_user }}"
-    mode: "0600"
-  no_log: true
-  when: expo_secret.stat.exists and expo_age_key.stat.exists
+- name: Decrypt + install each app's token
+  include_tasks: install_token.yml
+  loop: "{{ expo_secrets.files }}"
+  loop_control:
+    loop_var: secret_file
+    label: "{{ secret_file.path | basename }}"
+  when: expo_secrets.matched > 0 and expo_age_key.stat.exists

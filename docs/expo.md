@@ -20,30 +20,39 @@ interactive login entirely.
 
 | Consumer | How it gets the token |
 |---|---|
-| **VPS interactive shell** (`bunx eas-cli@latest …` over Termius/Zellij) | `expo-identity` role decrypts `expo-kost.age` on the laptop and writes `export EXPO_TOKEN=…` into `~/.bashrc.local` (mode 0600, sourced by `~/.bashrc`). |
+| **VPS interactive shell** (`bunx eas-cli@latest …` over Termius/Zellij) | `expo-identity` role decrypts `expo-<app>.age` on the laptop into `~/.config/expo/<app>.token` (mode 0600). Each app's repo wires its own `EXPO_TOKEN` from that file via mise — kost's `.mise.toml` `[env]` reads `~/.config/expo/kost.token`, so the token is set **only inside that repo**. |
 | **GitHub Actions** (`build-mobile.yml`, `update-mobile.yml`) | A repo-level Actions secret `EXPO_TOKEN`. Actions can't read the age store, so it's synced separately with `gh secret set`. |
 
-The `.age` file is the **canonical source**; the Actions secret is a synced copy.
-`~/.bashrc.local` only applies to *interactive* shells — that's fine, the VPS
-only runs `eas` interactively; CI uses its own secret.
+The `.age` file is the **canonical source**; the token file and the Actions
+secret are synced copies. Per-repo wiring (not a global export) is what lets
+multiple Expo apps coexist — see [Multiple Expo apps](#multiple-expo-apps).
 
 ## Trust model
 
 Same as [`secrets.md`](secrets.md): the age **private key** (`secrets.local`)
 lives only on the laptop; encryption + provisioning happen there. The token does
-land at rest on the VPS (in `~/.bashrc.local`) — like the GitHub PAT does — so an
+land at rest on the VPS (in `~/.config/expo/<app>.token`) — like the GitHub PAT does — so an
 attacker with root on the box could read it. Scope it accordingly when you create
 it (an EAS access token can be revoked independently at any time).
 
 ## Multiple Expo apps
 
 EAS CLI always reads the env var **`EXPO_TOKEN`** — you can't scope by var name.
-So scope by **secret + robot** instead: one `expo-<app>.age` and one robot
-`<app>-eas` per app. With a single app today, the `expo-identity` role exports
-`EXPO_TOKEN` globally in `~/.bashrc.local`. When a **second** app arrives, two
-apps can't share one global var — switch to **per-repo** wiring (each repo's
-`.mise.toml` sets `EXPO_TOKEN` from its own `~/.config/expo/<app>.token`). Until
-then, global is simplest.
+So the whole pipeline is scoped per app, and `EXPO_TOKEN` is wired **per repo**
+(never globally) so two apps never collide. The pattern for an app `<app>`:
+
+| Layer | Name |
+|---|---|
+| Expo robot user | `<app>-eas` |
+| age secret | `ansible/secrets/expo-<app>.age` |
+| token file on the VPS | `~/.config/expo/<app>.token` (laid down by `expo-identity`) |
+| env var (fixed) | `EXPO_TOKEN`, set by that repo's `.mise.toml` `[env]` from its token file |
+
+Adding an app is mechanical: create robot `<app>-eas`, encrypt its token to
+`expo-<app>.age`, re-run the role (it globs `expo-*.age` → one token file each),
+and add the one-line `[env]` to that repo's `.mise.toml`. When the token file is
+absent (CI, or pre-bootstrap) mise sets `EXPO_TOKEN` **empty** — EAS treats that
+as no token, so nothing breaks.
 
 ## One-time bootstrap (on your laptop)
 
@@ -89,8 +98,8 @@ gh secret set EXPO_TOKEN -R fum4/kost       # paste the same token
 ### 5. Verify
 
 ```bash
-# On the VPS (open a fresh shell so ~/.bashrc.local is sourced):
-echo "${EXPO_TOKEN:+EXPO_TOKEN is set}"
+# On the VPS, from INSIDE the app repo (mise sets EXPO_TOKEN there):
+cd ~/code/kost && echo "${EXPO_TOKEN:+EXPO_TOKEN is set}"
 bunx eas-cli@latest whoami                  # prints the Expo account
 
 # CI: the build-mobile / update-mobile workflows now authenticate.
@@ -103,10 +112,16 @@ Revoke the old token at expo.dev, then repeat steps 1–4 with a new one
 
 ## Before bootstrap — using EAS from the phone right now
 
-Until the token is installed you can still work interactively:
+Until the laptop bootstrap, drop the token file mise reads — it works
+immediately inside the app repo and is the same file the role lays down later:
 
 ```bash
-bunx eas-cli@latest login                   # interactive, ephemeral (dies on rebuild)
-# or, for the current shell only:
-export EXPO_TOKEN=<token>
+mkdir -p ~/.config/expo
+read -rs t && printf '%s' "$t" > ~/.config/expo/kost.token && unset t
+chmod 600 ~/.config/expo/kost.token
+# …or fully interactive from any dir (ephemeral, dies on rebuild):
+bunx eas-cli@latest login
 ```
+
+(Prefer the file over `export EXPO_TOKEN=…`: mise re-applies the repo's `[env]`
+on each prompt and would clobber a manual export inside the repo.)
