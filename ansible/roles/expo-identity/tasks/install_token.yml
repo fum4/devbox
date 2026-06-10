@@ -1,0 +1,22 @@
+---
+# Decrypt one ansible/secrets/expo-<app>.age and lay it down as
+# ~/.config/expo/<app>.token (mode 0600). `secret_file` is the matched file from
+# the find in main.yml. Decryption runs on the controller (laptop); no_log keeps
+# the plaintext out of Ansible output.
+
+- name: "Decrypt {{ secret_file.path | basename }} on the controller"
+  command: age -d -i {{ playbook_dir }}/../secrets.local {{ secret_file.path }}
+  register: expo_token
+  delegate_to: localhost
+  become: false
+  no_log: true
+  changed_when: false
+
+- name: "Install token → ~/.config/expo/<app>.token"
+  copy:
+    content: "{{ expo_token.stdout }}"
+    dest: '/home/{{ devbox_user }}/.config/expo/{{ secret_file.path | basename | regex_replace("^expo-", "") | regex_replace("\\.age$", "") }}.token'
+    owner: "{{ devbox_user }}"
+    group: "{{ devbox_user }}"
+    mode: "0600"
+  no_log: true

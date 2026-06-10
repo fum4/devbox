@@ -1,0 +1,58 @@
+---
+# Install EAS access tokens (EXPO_TOKEN) from age-encrypted, PER-APP secrets so
+# `eas` / `bunx eas-cli` authenticate without an interactive login that dies on a
+# rebuild. Per-app from the start:
+#
+#   ansible/secrets/expo-<app>.age  →  ~/.config/expo/<app>.token   (mode 0600)
+#
+# EAS hardcodes the EXPO_TOKEN env-var name, so two apps can't share one global
+# export. Instead each app's repo wires its own token via mise (its .mise.toml
+# reads ~/.config/expo/<app>.token into EXPO_TOKEN). This role just lays down the
+# per-app token files. See docs/expo.md.
+#
+# Decrypted on the CONTROLLER (laptop) via secrets.local; the VPS never sees the
+# age private key. Skips gracefully when there are no secrets OR secrets.local is
+# absent (e.g. a VPS-local devbox-reprov). Token files from a prior laptop
+# provision persist in ~/.config/expo across such runs. CI uses its own GitHub
+# Actions secret, not these files.
+
+- name: Find encrypted per-app Expo tokens
+  find:
+    paths: "{{ playbook_dir }}/secrets"
+    patterns: "expo-*.age"
+  register: expo_secrets
+  delegate_to: localhost
+  become: false
+
+- name: Check for the age private key on the controller
+  stat:
+    path: "{{ playbook_dir }}/../secrets.local"
+  register: expo_age_key
+  delegate_to: localhost
+  become: false
+
+- name: Notice — Expo tokens unavailable, skipping expo-identity
+  debug:
+    msg: >-
+      No EXPO tokens installed
+      ({{ 'no expo-*.age secrets' if expo_secrets.matched == 0
+          else 'secrets.local missing on controller' }}).
+      Bootstrap on the laptop per docs/expo.md, or use `eas login` interactively.
+  when: expo_secrets.matched == 0 or not expo_age_key.stat.exists
+
+- name: Ensure ~/.config/expo exists
+  file:
+    path: "/home/{{ devbox_user }}/.config/expo"
+    state: directory
+    owner: "{{ devbox_user }}"
+    group: "{{ devbox_user }}"
+    mode: "0700"
+  when: expo_secrets.matched > 0 and expo_age_key.stat.exists
+
+- name: Decrypt + install each app's token
+  include_tasks: install_token.yml
+  loop: "{{ expo_secrets.files }}"
+  loop_control:
+    loop_var: secret_file
+    label: "{{ secret_file.path | basename }}"
+  when: expo_secrets.matched > 0 and expo_age_key.stat.exists
