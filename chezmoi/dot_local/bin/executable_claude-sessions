@@ -107,6 +107,7 @@ else
         printf '      cwd:    %s%s\n' "$(tilde "$cwd")" "${branch:+  [$branch]}"
         printf '      conv:   %s%s%s\n' "$DIM" "$sid" "$RESET"
         if [[ "$state" == active ]]; then
+            # shellcheck disable=SC2016  # $XDG_RUNTIME_DIR is meant to print literally (the user copies the command)
             printf '      attach: %sdtach -a $XDG_RUNTIME_DIR/claude-%s.sock%s\n' "$DIM" "$name" "$RESET"
         else
             printf '      resume: %sclaude-restore %s%s   (or systemctl --user start claude@%s)\n' "$DIM" "$name" "$RESET" "$name"

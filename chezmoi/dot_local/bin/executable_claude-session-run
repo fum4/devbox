@@ -47,9 +47,12 @@ rm -f "$sock"   # clear a stale socket from a previous (crashed) instance
 # Intentional stop (systemctl stop => SIGTERM, or a quit => SIGINT): tear the
 # dtach child down and exit 0 so the unit goes `inactive`, not `failed`.
 child=0
+# shellcheck disable=SC2317  # body runs via the TERM/INT trap below, not inline
 graceful() {
-    [[ $child -ne 0 ]] && kill -TERM "$child" 2>/dev/null || true
-    [[ $child -ne 0 ]] && wait "$child" 2>/dev/null || true
+    if [[ $child -ne 0 ]]; then
+        kill -TERM "$child" 2>/dev/null || true
+        wait "$child" 2>/dev/null || true
+    fi
     rm -f "$sock"
     exit 0
 }
