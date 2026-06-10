@@ -23,7 +23,12 @@ jobs:
           python-version: '3.x'
 
       - name: Install Ansible + yamllint
-        run: pip install ansible-core yamllint
+        # Full `ansible` (not `ansible-core`) so the bundled collections the roles
+        # use — community.general (ufw), ansible.posix (sysctl/mount) — resolve in
+        # syntax-check. This mirrors the box, which installs full `ansible` via apt
+        # (see ansible/roles/ansible-cli). ansible-core has no collections, so it
+        # red the check on every push.
+        run: pip install ansible yamllint
 
       - name: yamllint
         # Config lives in ./.yamllint at the repo root.

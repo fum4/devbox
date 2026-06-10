@@ -104,6 +104,15 @@ Worktrees are the default for anything that's a feature in its own right. But no
 
 Code goes to remote **clean** — never push raw, unchecked work. Before `wt pr` (or any push), run the working repo's quality gate: **format, lint, and typecheck**, plus tests where the change warrants them. The exact commands are per-repo and defined in that repo's dev contract (its `.mise.toml` tasks / `CLAUDE.md`) — discover and run *those*, don't guess. For kost that's `oxfmt` (format) + `oxlint` (lint) + `tsgo` typecheck, all exposed as mise tasks. Fix what they flag before pushing; remote is not the first feedback loop. Markdown/doc-only changes don't need a typecheck, but still apply whatever formatting the repo enforces.
 
+### Keep CI green — every repo, always
+
+`main` stays green at all times, in **every** repo (devbox included). A red CI run is a bug, not background noise — it blinds the next person to real failures and makes the pipeline worthless as a signal.
+
+- **Never push work that reds CI.** The local quality gate above exists precisely so the first red isn't on the remote. If a push goes red, fixing it is the immediate next task — before the work you were about to do.
+- **Never merge onto red.** Don't merge a PR with a failing required check, and don't admin-merge "to fix later" — *later* is how `main` rots red for days.
+- **A pre-existing red `main` is a P0.** If you find it already broken (not your change), surface it and fix it — or get the owner's call — before stacking more work on top.
+- **CI must test what actually runs.** If CI is green but the real target fails (or vice-versa), the check is lying — fix the *mismatch* (install the same deps/versions the target has), never tune the check to a dishonest green. (E.g. CI installing `ansible-core` while the box runs full `ansible` — the roles' collections didn't resolve in CI though they work in production.)
+
 ## Repository sync
 
 The VPS does **not** auto-pull repos on a schedule. Freshness is enforced at the moments where it matters:
