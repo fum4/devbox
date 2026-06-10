@@ -57,6 +57,9 @@
     - role: github-identity     # install age-encrypted GitHub SSH key + PAT (see docs/github.md)
       tags: [github-identity, repos]
 
+    - role: expo-identity       # install age-encrypted EAS token (EXPO_TOKEN) into the shell (see docs/expo.md)
+      tags: [expo-identity, secrets]
+
     - role: repos               # clone every repo in ../repos.txt to ~/code/ (gated on gh auth)
       tags: [repos]
 
