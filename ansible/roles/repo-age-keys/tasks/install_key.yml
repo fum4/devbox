@@ -1,0 +1,21 @@
+---
+# Decrypt one ansible/secrets/<repo>-age-key.age and lay it down as
+# ~/.config/age/<repo>.key (mode 0600). Decryption runs on the controller
+# (laptop); no_log keeps the plaintext key out of Ansible output.
+
+- name: "Decrypt {{ secret_file.path | basename }} on the controller"
+  command: age -d -i {{ playbook_dir }}/../secrets.local {{ secret_file.path }}
+  register: repo_age_plain
+  delegate_to: localhost
+  become: false
+  no_log: true
+  changed_when: false
+
+- name: "Install key → ~/.config/age/<repo>.key"
+  copy:
+    content: "{{ repo_age_plain.stdout }}\n"
+    dest: '/home/{{ devbox_user }}/.config/age/{{ secret_file.path | basename | regex_replace("-age-key\\.age$", "") }}.key'
+    owner: "{{ devbox_user }}"
+    group: "{{ devbox_user }}"
+    mode: "0600"
+  no_log: true

@@ -1,0 +1,55 @@
+---
+# Install per-repo age PRIVATE keys from age-encrypted secrets so a rebuilt box
+# can decrypt each repo's own secrets/*.age (via `mise run secrets:decrypt`)
+# without a manual paste from the password manager.
+#
+#   ansible/secrets/<repo>-age-key.age  →  ~/.config/age/<repo>.key   (mode 0600)
+#
+# Each app repo (tipso, accounting-sync, …) has its OWN age key; this role only
+# DELIVERS the keys. The repo's own secrets/*.age stay in that repo — just the
+# KEY rides the devbox. Decrypted on the CONTROLLER (laptop) via secrets.local;
+# the VPS never sees the devbox age private key. Skips gracefully when there are
+# no secrets OR secrets.local is absent (e.g. a VPS-local devbox-reprov). Keys
+# from a prior laptop provision persist in ~/.config/age across such runs.
+# See docs/secrets.md.
+
+- name: Find encrypted per-repo age keys
+  find:
+    paths: "{{ playbook_dir }}/secrets"
+    patterns: "*-age-key.age"
+  register: repo_age_keys
+  delegate_to: localhost
+  become: false
+
+- name: Check for the age private key on the controller
+  stat:
+    path: "{{ playbook_dir }}/../secrets.local"
+  register: repo_age_identity
+  delegate_to: localhost
+  become: false
+
+- name: Notice — per-repo age keys unavailable, skipping repo-age-keys
+  debug:
+    msg: >-
+      No per-repo age keys installed
+      ({{ 'no *-age-key.age secrets' if repo_age_keys.matched == 0
+          else 'secrets.local missing on controller' }}).
+      Restore each repo's key from your password manager, or bootstrap on the laptop.
+  when: repo_age_keys.matched == 0 or not repo_age_identity.stat.exists
+
+- name: Ensure ~/.config/age exists
+  file:
+    path: "/home/{{ devbox_user }}/.config/age"
+    state: directory
+    owner: "{{ devbox_user }}"
+    group: "{{ devbox_user }}"
+    mode: "0700"
+  when: repo_age_keys.matched > 0 and repo_age_identity.stat.exists
+
+- name: Decrypt + install each repo's age key
+  include_tasks: install_key.yml
+  loop: "{{ repo_age_keys.files }}"
+  loop_control:
+    loop_var: secret_file
+    label: "{{ secret_file.path | basename }}"
+  when: repo_age_keys.matched > 0 and repo_age_identity.stat.exists

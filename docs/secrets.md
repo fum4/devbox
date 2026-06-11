@@ -69,6 +69,8 @@ If all three decrypt cleanly, you're done — laptop is ready to run Ansible.
 | `ansible/secrets/tailscale-oauth.age` | Tailscale OAuth `client_secret` (`tskey-client-…`) | `tailscale` role → exchanged for an access token, used to mint a single-use auth key | **No** — only the minted key reaches the VPS |
 | `ansible/secrets/expo-kost.age` | EAS access token (`EXPO_TOKEN`, robot `kost-eas`) | `expo-identity` role → `export EXPO_TOKEN=…` in `~/.bashrc.local`. CI reads its own GitHub Actions secret, synced from this token (`gh secret set`). See [`expo.md`](expo.md). | Yes (at rest in `~/.bashrc.local`, mode 0600) |
 | `ansible/secrets/apple-signin-key.age` | Apple *Sign in with Apple* private key (`.p8`, Team `SWXC85YFF4`) | **Nobody** — recovery backup only. Clerk holds the live copy; Apple lets you download the `.p8` just once. Team-scoped (serves any Sign-in-with-Apple app, not only Tipso). | **No** — never installed; decrypt on the laptop only to re-enter it into Clerk. |
+| `ansible/secrets/tipso-age-key.age` | the **tipso repo's** age private key | `repo-age-keys` role → `~/.config/age/tipso.key` (mode 0600). Lets the box run `mise run secrets:decrypt` in `~/code/tipso`. | Yes (the box decrypts that repo's secrets locally) |
+| `ansible/secrets/accounting-age-key.age` | the **accounting-sync repo's** age private key | `repo-age-keys` role → `~/.config/age/accounting.key` (mode 0600). | Yes (same) |
 
 Why five secrets, three patterns: the OAuth `client_secret` is more powerful than the keys it mints, so we keep it on the controller. The GitHub PAT and SSH key are what the VPS actually needs in operation, so they have to live there. The Apple sign-in key is the third pattern: a recovery-only copy that no role consumes — encrypted in git purely so a one-time-download `.p8` is never lost. See [the PAT/OAuth explainer](#why-the-different-shapes) below.
 
@@ -136,6 +138,12 @@ manager. *Where* the ciphertext lives depends on **who owns the secret**:
 |---|---|---|
 | The box's own identity (GitHub, Tailscale, Expo) | here, `ansible/secrets/*.age` | the devbox age key (laptop-only) |
 | A repo's deploy/dev secrets (its tokens, `.env`s, deploy keys) | **in that repo**, encrypted | that **repo's own** age key |
+| A repo's **age key** itself (the bridge) | here, `ansible/secrets/<repo>-age-key.age` | the devbox age key |
+
+That last row is the one exception that proves the rule: a repo's *secrets* stay
+in the repo, but its **age key** is delivered by the devbox (via `repo-age-keys`)
+so a freshly-rebuilt box can decrypt them without a manual paste from your
+password manager. We carry the *key*, not the secrets.
 
 Keeping a repo's secrets *in the repo* keeps it self-contained (clone it + have
 its key → decrypt and run; no need to drag this repo along) and contains the
