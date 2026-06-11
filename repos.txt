@@ -19,6 +19,7 @@
 # experiments). Only persistent projects that should follow you to
 # every new devbox.
 
+fum4/chartekk
 fum4/devbox
 fum4/easyskills
 fum4/tipso
