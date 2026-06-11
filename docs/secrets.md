@@ -68,8 +68,9 @@ If all three decrypt cleanly, you're done — laptop is ready to run Ansible.
 | `ansible/secrets/github-pat.age` | GitHub PAT (`ghp_…`) | `github-identity` role → piped into `gh auth login --with-token` | Yes (stored at `~/.config/gh/hosts.yml`) |
 | `ansible/secrets/tailscale-oauth.age` | Tailscale OAuth `client_secret` (`tskey-client-…`) | `tailscale` role → exchanged for an access token, used to mint a single-use auth key | **No** — only the minted key reaches the VPS |
 | `ansible/secrets/expo-kost.age` | EAS access token (`EXPO_TOKEN`, robot `kost-eas`) | `expo-identity` role → `export EXPO_TOKEN=…` in `~/.bashrc.local`. CI reads its own GitHub Actions secret, synced from this token (`gh secret set`). See [`expo.md`](expo.md). | Yes (at rest in `~/.bashrc.local`, mode 0600) |
+| `ansible/secrets/apple-signin-key.age` | Apple *Sign in with Apple* private key (`.p8`, Team `SWXC85YFF4`) | **Nobody** — recovery backup only. Clerk holds the live copy; Apple lets you download the `.p8` just once. Team-scoped (serves any Sign-in-with-Apple app, not only Tipso). | **No** — never installed; decrypt on the laptop only to re-enter it into Clerk. |
 
-Why four secrets, two patterns: the OAuth `client_secret` is more powerful than the keys it mints, so we keep it on the controller. The GitHub PAT and SSH key are what the VPS actually needs in operation, so they have to live there. See [the PAT/OAuth explainer](#why-the-different-shapes) below.
+Why five secrets, three patterns: the OAuth `client_secret` is more powerful than the keys it mints, so we keep it on the controller. The GitHub PAT and SSH key are what the VPS actually needs in operation, so they have to live there. The Apple sign-in key is the third pattern: a recovery-only copy that no role consumes — encrypted in git purely so a one-time-download `.p8` is never lost. See [the PAT/OAuth explainer](#why-the-different-shapes) below.
 
 ## Adding a new encrypted secret
 
