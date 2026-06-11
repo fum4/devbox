@@ -119,57 +119,44 @@ The four directives that matter:
 
 The `.gitignore` already whitelists `ansible/secrets/*.age`, so the encrypted file commits but plaintext drops never do.
 
-## Project secrets — enrolling a repo
+## Scope: this store is for the *box's own* secrets
 
-The store above holds the *devbox's own* identity secrets, but the rule is
-universal (and codified in `agents/AGENTS.md`): **no secret on this box may exist
-only as gitignored plaintext in a repo's working tree.** That plaintext dies on a
-rebuild and vanishes if the laptop is lost — the same drift trap as a hand-edited
-live config. Every project that accumulates secrets enrolls them here instead, so
-the one root of trust (your age key, in the password manager) recovers everything.
+The store above holds the devbox's **own identity** secrets — the credentials
+*the box itself* needs to be itself (its GitHub identity, its place in the
+tailnet, its Expo build auth). It is **not** a dumping ground for every repo's
+secrets.
 
-The pattern, mirroring `github-identity` / `expo-identity`:
+The universal rule (codified in `agents/AGENTS.md`) is about *encryption*, not
+*location*: **no secret may exist only as gitignored plaintext** — it must be
+encrypted-at-rest somewhere durable, with the root of trust in your password
+manager. *Where* the ciphertext lives depends on **who owns the secret**:
 
-1. Encrypt each secret as `ansible/secrets/<repo>-<name>.age` (see *Adding a new
-   encrypted secret* above).
-2. Write a per-repo role (`<repo>-secrets` / `<repo>-identity`) that decrypts on
-   the laptop (`delegate_to: localhost`, `no_log: true`) and **places the
-   gitignored files** the repo's dev/deploy contract expects — `.env`s, tfvars,
-   SSH keys — onto the box, the way `github-identity` writes `~/.ssh/github-ssh`.
-3. Add the role to the play and a row to the inventory table above.
+| Secret kind | Lives where | Key |
+|---|---|---|
+| The box's own identity (GitHub, Tailscale, Expo) | here, `ansible/secrets/*.age` | the devbox age key (laptop-only) |
+| A repo's deploy/dev secrets (its tokens, `.env`s, deploy keys) | **in that repo**, encrypted | that **repo's own** age key |
 
-The payoff: those files stop being hand-crafted load-bearing state. A rebuilt
-devbox regenerates them from the encrypted source on provision; a lost laptop is
-recovered by restoring the age key from the password manager.
+Keeping a repo's secrets *in the repo* keeps it self-contained (clone it + have
+its key → decrypt and run; no need to drag this repo along) and contains the
+blast radius (a repo's key can't decrypt the box's identity, and can be handed to
+that repo's CI in isolation). That's the professional default — see kost's
+`docs/decisions/0006-secret-handling.md` for the full reasoning.
+
+**The devbox's role in the per-repo model is key *delivery*, not storage.** A repo
+consumed *on this box* (e.g. you run its `terraform` / `mise run dev` here) needs
+its age key present to decrypt. So the box delivers each such repo's age key the
+same laptop-only way it delivers its own identity: the repo's age **private** key
+is encrypted under the *devbox* key as `ansible/secrets/<repo>-age-key.age`, and a
+small role decrypts it on the laptop and drops it at the path that repo's decrypt
+task expects. The repo owns its encrypted *secrets*; the devbox just makes sure
+its *key* is on the box.
 
 > **Foundation (independent of any repo):** the password manager must hold the
-> **age private key** *and* the **provider account logins + 2FA recovery codes**
-> (Cloudflare, Hetzner, Vercel, Clerk, OpenRouter, GitHub, …). Those account
-> logins are the true root — regenerating any token assumes you can still log in.
-
-### Pending: kost infra secrets
-
-kost's bootstrap secrets currently live only as gitignored plaintext on the
-devbox — the first repo to enroll. Decision + rationale recorded 2026-06-10
-(chosen over SOPS-in-repo and a managed secret manager: both duplicate or
-over-build vs this age store). kost's app *runtime* secrets are already durable
-(Coolify's encrypted DB + the nightly R2 backup bundle that carries `APP_KEY`),
-so only the **infra set** is the gap:
-
-| To encrypt → `ansible/secrets/` | Plaintext | Role places it at |
-|---|---|---|
-| `kost-hcloud-token.age` | Hetzner API token | `~/code/kost/infra/terraform/terraform.tfvars` |
-| `kost-vercel-token.age` | Vercel API token | ↑ same tfvars |
-| `kost-r2-backup.age` | R2 `kost-backup` key id + secret | tfvars **and** `infra/terraform/.r2-backend.env` |
-| `kost-vps-ssh.age` | `kost_vps` private key | `~/.ssh/kost_vps` (mode 0600) |
-| `kost-coolify-appkey.age` | Coolify `APP_KEY` (recovery copy) | — (recovery only; Coolify stays the runtime source) |
-
-Open choices for the implementing session: role name (`kost-secrets` vs
-`kost-identity`); whether to also enroll the dev env files (`apps/api/.env`,
-`apps/mobile/.env.local`) so a fresh box can `mise run dev`, not just deploy (also
-retires the per-worktree env-copy chore); and a re-encrypt step in kost's token-
-rotation runbook so `kost-coolify-appkey.age` can't drift. kost-side context:
-`~/code/kost/docs/runbooks/disaster-recovery.md`.
+> **age private keys** (the devbox's and each repo's) *and* the **provider account
+> logins + 2FA recovery codes** (Cloudflare, Hetzner, Vercel, Clerk, OpenRouter,
+> GitHub, …). Those account logins are the true root — regenerating any token
+> assumes you can still log in. See `TODO.md` for the pending kost age-key
+> delivery role.
 
 ## Decrypting for verification or debugging
 
