@@ -15,7 +15,7 @@ Then proceed with the user's actual request. (This ritual is global across all r
 
 ## Layout
 
-- **Repos**: `~/code/<project-name>/` (e.g. `~/code/kost`). Each is its own git repo.
+- **Repos**: `~/code/<project-name>/` (e.g. `~/code/tipso`). Each is its own git repo.
 - **VPS infra source**: `~/code/devbox`.
 - **Cross-agent home**: `~/code/devbox/agents/` — `./AGENTS.md` (this file) and `./skills/` (loaded on demand).
 - **Agent sessions**: each is a systemd user unit `claude@<name>.service` (durable, isolated, phone-driveable). Spawn with `claude-spawn`, restore after a reboot with `claude-restore`. See [`docs/sessions.md`](../docs/sessions.md).

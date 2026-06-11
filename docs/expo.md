@@ -99,7 +99,7 @@ gh secret set EXPO_TOKEN -R fum4/kost       # paste the same token
 
 ```bash
 # On the VPS, from INSIDE the app repo (mise sets EXPO_TOKEN there):
-cd ~/code/kost && echo "${EXPO_TOKEN:+EXPO_TOKEN is set}"
+cd ~/code/tipso && echo "${EXPO_TOKEN:+EXPO_TOKEN is set}"
 bunx eas-cli@latest whoami                  # prints the Expo account
 
 # CI: the build-mobile / update-mobile workflows now authenticate.
