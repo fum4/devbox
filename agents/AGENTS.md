@@ -120,6 +120,16 @@ Code goes to remote **clean** — never push raw, unchecked work. Before `wt pr`
 - **A pre-existing red `main` is a P0.** If you find it already broken (not your change), surface it and fix it — or get the owner's call — before stacking more work on top.
 - **CI must test what actually runs.** If CI is green but the real target fails (or vice-versa), the check is lying — fix the *mismatch* (install the same deps/versions the target has), never tune the check to a dishonest green. (E.g. CI installing `ansible-core` while the box runs full `ansible` — the roles' collections didn't resolve in CI though they work in production.)
 
+### Keep docs current — every repo, always
+
+Docs are part of the change, not a follow-up. A README, doc, or comment that contradicts the code is a bug — like a red CI run, it quietly misleads the next person. **If a doc/README/comment and the code disagree, the code is right and the doc is the defect.** This holds in **every** repo, not just devbox.
+
+- **Update the doc in the same commit as the code that dates it.** Add a workspace app, rename a path, change a command/flow → fix the doc that describes it right then. "Later" is how an `apps/README.md` ends up listing 2 of 5 apps.
+- **When you touch a file, glance at the docs nearest it** — the README in the directory you're editing, the doc a behavior is described in. Correct drift you spot even if it predates your change (cheap fixes now; flag bigger ones).
+- **Structural truth especially.** Docs that *enumerate reality* — an `apps/` / `packages/` README, a module index, a tools table — must match what's actually there. They rot silently and mislead newcomers most.
+
+(devbox's own infra docs carry a stronger same-commit obligation — see "Docs ship with infra" above. This is the cross-repo floor.)
+
 ## Repository sync
 
 The VPS does **not** auto-pull repos on a schedule. Freshness is enforced at the moments where it matters:
