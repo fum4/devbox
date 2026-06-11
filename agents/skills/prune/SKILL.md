@@ -12,7 +12,7 @@ This replaces the old auto-prune cron, which removed merged worktrees blindly an
 - **Never act without per-item confirmation.** List candidates; the user picks.
 - **Never touch a worktree with uncommitted changes.** Flag it "has unsaved work — keep."
 - **Never touch a worktree that has a live session in it.** Flag it; the session is dealt with first (parked or left).
-- **Park sessions, don't kill them.** Use `claude-park <name>` — it records the `claude --resume <id>` line *before* closing the tab, so closing is reversible.
+- **Park sessions, don't kill them.** Use `claude-park <name>` — it stops the systemd unit but keeps the env file + pinned conversation id, so it's fully reversible with `claude-restore <name>`. (Parking ≠ forgetting; the conversation persists.)
 
 ## Steps
 
@@ -34,7 +34,7 @@ This replaces the old auto-prune cron, which removed merged worktrees blindly an
 
 5. **Act on confirmed items only:**
    - worktree → `wt rm <task>` (refuses unless the PR is MERGED — a second safety net; `--force` only if the user explicitly says "discard").
-   - session → `claude-park <name>` (logs resume id, then closes the tab).
+   - session → `claude-park <name>` (stops the unit; conversation preserved — restore later with `claude-restore <name>`).
 
 6. **Report** what was pruned/parked and what was deliberately kept (and why).
 

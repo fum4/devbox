@@ -1,0 +1,12 @@
+# Aggregate resource slice for all Claude agent sessions (claude@*.service).
+# Ceilings, not reservations: idle agents use a few hundred MB, so these only
+# bite under sprawl, leaving headroom for on-demand dev servers (which already
+# auto-size off *available* RAM). Tuned for a 15 GB box. See docs/sessions.md.
+[Unit]
+Description=Claude agent sessions (aggregate resource slice)
+
+[Slice]
+MemoryAccounting=yes
+MemoryHigh=10G
+MemoryMax=12G
+CPUWeight=100

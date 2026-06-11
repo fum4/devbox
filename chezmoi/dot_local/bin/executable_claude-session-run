@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# claude-session-run <name> — supervise + launch a Claude agent session inside
+# its systemd user unit (claude@<name>.service). It is the unit's MAIN process:
+# it owns a `dtach` child that holds the PTY for `claude`. NOT meant to be run by
+# hand. See ~/code/devbox/docs/sessions.md.
+#
+# Why this script is the main process (not dtach directly): dtach exits 1 when
+# terminated by a signal, so a clean `systemctl stop` would be indistinguishable
+# from a crash — the unit would show `failed` and we couldn't tell an intentional
+# stop from a real crash that should restart. By supervising, we exit 0 on
+# SIGTERM/SIGINT (clean stop / quit) and propagate dtach's non-zero exit only on
+# an actual crash — so `failed` always means a genuine crash, and Restart=on-failure
+# only fires then.
+#
+# Per-session vars come from systemd's EnvironmentFile (written by claude-spawn):
+#   SESSION_ID         (required) stable UUID — pins the conversation across
+#                      restarts so a crash-restart resumes the *same* session.
+#   CWD                (required) working directory for the session.
+#   PERM_MODE          permission posture (default: bypassPermissions).
+#   APPEND_PROMPT_FILE optional file whose contents become --append-system-prompt.
+set -euo pipefail
+
+name="${1:?usage: claude-session-run <name>}"
+: "${SESSION_ID:?SESSION_ID not set (bad env file)}"
+: "${CWD:?CWD not set (bad env file)}"
+sock="${XDG_RUNTIME_DIR:?}/claude-${name}.sock"
+
+cd "$CWD"
+
+args=(--remote-control "$name" --permission-mode "${PERM_MODE:-bypassPermissions}")
+
+# Pin the conversation to SESSION_ID: first launch creates it (--session-id),
+# any relaunch (crash-restart, or a deliberate claude-restore) resumes it.
+transcript="$HOME/.claude/projects/${CWD//\//-}/$SESSION_ID.jsonl"
+if [[ -f "$transcript" ]]; then
+    args+=(--resume "$SESSION_ID")
+else
+    args+=(--session-id "$SESSION_ID")
+fi
+
+if [[ -n "${APPEND_PROMPT_FILE:-}" && -f "$APPEND_PROMPT_FILE" ]]; then
+    args+=(--append-system-prompt "$(cat "$APPEND_PROMPT_FILE")")
+fi
+
+rm -f "$sock"   # clear a stale socket from a previous (crashed) instance
+
+# Intentional stop (systemctl stop => SIGTERM, or a quit => SIGINT): tear the
+# dtach child down and exit 0 so the unit goes `inactive`, not `failed`.
+child=0
+# shellcheck disable=SC2317  # body runs via the TERM/INT trap below, not inline
+graceful() {
+    if [[ $child -ne 0 ]]; then
+        kill -TERM "$child" 2>/dev/null || true
+        wait "$child" 2>/dev/null || true
+    fi
+    rm -f "$sock"
+    exit 0
+}
+trap graceful TERM INT
+
+# dtach holds the PTY (foreground, -N); `bash -ic` so ~/.bashrc runs and the mise
+# shell-hook puts node/bun/claude on PATH (systemd user units start with a minimal
+# environment). dtach has a real PTY, so interactive bash is fine.
+/usr/bin/dtach -N "$sock" /bin/bash -ic 'exec claude "$@"' bash "${args[@]}" &
+child=$!
+
+# Wait for dtach. If it exits on its own (claude crashed/quit), propagate the
+# code: non-zero => Restart=on-failure resumes; zero (you quit) => no restart.
+rc=0
+wait "$child" || rc=$?
+rm -f "$sock"
+exit "$rc"

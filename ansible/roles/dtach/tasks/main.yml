@@ -1,0 +1,10 @@
+---
+# dtach — minimal detachable PTY, no server. The lifecycle of each Claude agent
+# session is owned by a systemd *user* unit (claude@<name>.service); dtach holds
+# the real PTY that the (TUI) `claude` process needs, while letting the laptop
+# attach/detach at will. Unlike tmux it has no shared server, so one session can
+# never take down another. See docs/sessions.md.
+- name: Install dtach
+  apt:
+    name: dtach
+    state: present

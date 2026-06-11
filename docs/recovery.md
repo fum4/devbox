@@ -149,10 +149,13 @@ Then fix the OAuth client and re-run normally on the next provision.
 
 ## Claude session offline on phone
 
-1. **VPS Zellij session died** — **on the laptop:** `ssh devbox`, then **on the VPS:** `zj <project>` (idempotent).
-2. **Claude TUI exited inside the session** — **on the VPS** in the Zellij claude tab, run `claude` again, then **inside the Claude TUI:** `/remote-control`.
-3. **`/remote-control` not active** — **inside the Claude TUI:** run `/remote-control` and choose *Enable Remote Control*.
-4. **Anthropic relay outage** (rare) — https://status.anthropic.com.
+Agent sessions are systemd user units (`claude@<name>.service`) — see [sessions.md](sessions.md). Work the list in order:
+
+1. **Box was rebooted** — sessions are not auto-started by design. **On the VPS:** `claude-restore` to list what's restorable, then `claude-restore <name>` / `--all` to bring them back (each resumes its exact conversation).
+2. **Unit stopped or crashed** — `claude-sessions` shows the state. `failed` = a crash that exhausted restarts; check `journalctl --user -u claude@<name>`, then `systemctl --user reset-failed claude@<name> && claude-restore <name>`. `inactive` = parked; `claude-restore <name>`.
+3. **`/remote-control` not active** — **inside the Claude TUI** (attach with `dtach -a $XDG_RUNTIME_DIR/claude-<name>.sock` or `zj <project>`): run `/remote-control` → *Enable Remote Control*.
+4. **User systemd manager not running** (sessions can't start at all) — confirm linger: `loginctl show-user fum4 | grep Linger` should say `Linger=yes`; if not, `sudo loginctl enable-linger fum4` (durably set by the sessions Ansible role).
+5. **Anthropic relay outage** (rare) — https://status.anthropic.com.
 
 ## Metro / Expo Go can't reach Metro
 

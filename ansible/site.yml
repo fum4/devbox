@@ -31,8 +31,11 @@
     - role: claude              # Claude Code CLI
       tags: [claude, tools]
 
-    - role: zellij              # Zellij binary
+    - role: zellij              # Zellij binary (disposable session-dashboard viewer)
       tags: [zellij, tools]
+
+    - role: dtach               # detachable PTY for systemd-supervised agent sessions
+      tags: [dtach, tools]
 
     - role: claude-squad        # Claude Squad TUI
       tags: [claude-squad, tools]

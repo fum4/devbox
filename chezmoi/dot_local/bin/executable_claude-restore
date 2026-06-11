@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+# claude-restore — bring back agent sessions that are known but not running.
+#
+# Agent sessions live as systemd user units (claude@<name>.service) with a
+# persisted env file. They are deliberately NOT auto-started at boot (resuming a
+# fleet mid-task unattended is unsafe — see docs/sessions.md "Boot policy"), so
+# after a reboot, or after parking sessions, this is how you bring them back. Each
+# restored session resumes its *exact* conversation (the pinned SESSION_ID).
+#
+#   claude-restore                 list restorable sessions (known but not active)
+#   claude-restore <name>...       restore the named session(s)
+#   claude-restore --all           restore every restorable session
+#
+# Restoring is just `systemctl --user start` — across SSH drops / sleep / a dead
+# Zellij viewer the process never died, so you only need this after a real reboot
+# or a deliberate stop.
+set -euo pipefail
+
+CONF_DIR="$HOME/.config/claude-sessions"
+PROJ_DIR="$HOME/.claude/projects"
+NOW_S=$(date +%s)
+
+if [[ -t 1 ]]; then
+    BOLD=$'\e[1m'; DIM=$'\e[2m'; RESET=$'\e[0m'
+else
+    BOLD=""; DIM=""; RESET=""
+fi
+
+rel_time() {
+    local s="$1" d
+    [[ -z "$s" || "$s" == "0" ]] && { echo "never used"; return; }
+    d=$(( NOW_S - s ))
+    if   (( d < 3600 ));  then echo "$(( d / 60 ))m ago"
+    elif (( d < 86400 )); then echo "$(( d / 3600 ))h ago"
+    else echo "$(( d / 86400 ))d ago"; fi
+}
+
+restorable() {  # names of known sessions that are NOT currently active
+    [[ -d "$CONF_DIR" ]] || return 0
+    local f name
+    for f in "$CONF_DIR"/*.env; do
+        [[ -e "$f" ]] || continue
+        name="$(basename "$f" .env)"
+        systemctl --user --quiet is-active "claude@${name}.service" 2>/dev/null && continue
+        echo "$name"
+    done
+}
+
+meta() {  # echo "<sessionId>\t<cwd>\t<lastActive>" for a session name
+    local f="$CONF_DIR/$1.env" sid cwd last=0
+    sid="$(sed -n 's/^SESSION_ID=//p' "$f")"
+    cwd="$(sed -n 's/^CWD=//p' "$f")"
+    local t="$PROJ_DIR/${cwd//\//-}/$sid.jsonl"
+    [[ -f "$t" ]] && last=$(stat -c %Y "$t" 2>/dev/null || echo 0)
+    printf '%s\t%s\t%s\n' "$sid" "$cwd" "$last"
+}
+
+start_one() {
+    local name="$1"
+    [[ -f "$CONF_DIR/$name.env" ]] || { echo "claude-restore: no such session '$name'" >&2; return 1; }
+    if systemctl --user --quiet is-active "claude@${name}.service" 2>/dev/null; then
+        echo "  $name — already running, skipped"; return 0
+    fi
+    systemctl --user start "claude@${name}.service"
+    IFS=$'\t' read -r sid _ _ < <(meta "$name")
+    echo "  $name — restored (conversation $sid)"
+}
+
+mapfile -t REST < <(restorable)
+
+# List mode (no args).
+if [[ $# -eq 0 ]]; then
+    if [[ ${#REST[@]} -eq 0 ]]; then
+        echo "No restorable sessions — every known session is already running (or none exist)."
+        exit 0
+    fi
+    echo "${BOLD}Restorable sessions${RESET} ${DIM}(known but not running)${RESET}:"
+    for name in "${REST[@]}"; do
+        IFS=$'\t' read -r sid cwd last < <(meta "$name")
+        printf '  %s%-20s%s %slast active %s · %s%s\n' \
+            "$BOLD" "$name" "$RESET" "$DIM" "$(rel_time "$last")" "${cwd/#$HOME/\~}" "$RESET"
+    done
+    echo
+    echo "${DIM}restore: claude-restore <name>...   ·   all: claude-restore --all${RESET}"
+    exit 0
+fi
+
+# Action mode.
+systemctl --user daemon-reload
+if [[ "${1:-}" == "--all" ]]; then
+    [[ ${#REST[@]} -gt 0 ]] || { echo "Nothing to restore."; exit 0; }
+    echo "Restoring ${#REST[@]} session(s):"
+    for name in "${REST[@]}"; do start_one "$name"; done
+else
+    echo "Restoring:"
+    for name in "$@"; do start_one "$name"; done
+fi
+echo "Refresh the phone Claude app — restored sessions reappear in the list."
