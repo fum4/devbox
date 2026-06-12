@@ -42,5 +42,15 @@ set -a
 . <(age -d -i "$AGE_KEY" "$SECRETS/r2-devbox-state.age")
 set +a
 
+# Use ONLY the R2 creds injected above. Without this, the S3 backend's AWS
+# credential chain can pick up a personal ~/.aws/credentials / ~/.aws/config
+# profile and shadow them (symptom: "Credential access key has length 20,
+# should be 32" — that 20-char key is a real AWS key, not our 32-char R2 one).
+# Pointing the shared files at /dev/null leaves the injected env vars as the
+# only credential source.
+export AWS_SHARED_CREDENTIALS_FILE=/dev/null
+export AWS_CONFIG_FILE=/dev/null
+unset AWS_PROFILE
+
 cd "$REPO/terraform/devbox"
 exec terraform "$@"
