@@ -53,12 +53,6 @@ skills = [
 ]
 
 [[source]]
-url = "github:nextlevelbuilder/ui-ux-pro-max-skill/.claude/skills/ui-ux-pro-max"
-version = "latest"
-resolved = "b7e3af80f6e331f6fb456667b82b12cade7c9d35"
-skills = ["ui-ux-pro-max"]
-
-[[source]]
 url = "github:anthropics/skills/skills/skill-creator"
 version = "latest"
 resolved = "57546260929473d4e0d1c1bb75297be2fdfa1949"

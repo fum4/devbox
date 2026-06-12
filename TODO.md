@@ -47,5 +47,5 @@ process-compose lifecycle hooks?).
 ## Vendored skills — rejected so far
 
 For the record (wave 1 + 2 installed 2026-06-12, see `docs/skills.md`):
-`agentspace` (ships files to external cloud — security policy), and
+`ui-ux-pro-max` (headline search-CLI broken as vendored — escaping symlinks — and its BM25 keyword-matching underwhelmed in a live demo; re-evaluate if upstream repackages), `agentspace` (ships files to external cloud — security policy), and
 `github-actions-docs` (no Actions minutes; revisit if CI matters again).
