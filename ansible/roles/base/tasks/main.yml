@@ -18,6 +18,7 @@
       - unzip
       - tmux
       - ffmpeg # compose e2e per-flow videos into one side-by-side, persona-labeled clip
+      - poppler-utils # pdftoppm/pdftotext — lets the agent read uploaded PDFs (text + page render)
     state: present
 
 - name: Create user {{ devbox_user }}
