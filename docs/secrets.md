@@ -216,6 +216,39 @@ implementation + recover/rotate/disaster runbooks: tipso `infra/terraform/` and
 `tipso/docs/runbooks/{secrets,disaster-recovery}.md`. Devbox-specific Terraform
 mechanics: [`terraform.md`](terraform.md).
 
+### Minting anything new? Walk this checklist
+
+Every drift incident so far happened by *skipping a question below*, not by not
+knowing the rules. Before creating any credential, token, key, or state store —
+answer these **in order**, out loud, before clicking "create":
+
+1. **Who owns it?** The repo whose system consumes it. Devbox's own existence/
+   identity → devbox repo. A product's deploy/infra → that product's repo. Never
+   park one repo's secret in another repo "for convenience".
+2. **Does the owner have an age key yet?** Existing repo with secrets → use its
+   key. A repo minting its **first** secret → first `age-keygen` a keypair for
+   it, put the private key in **Bitwarden** (entry: *"<repo> age key"*), deliver
+   it where it's consumed (laptop file / `repo-age-keys` role). This is the
+   **only** thing that ever goes into Bitwarden.
+3. **Scope the credential minimally.** One bucket, one project, least
+   permission. An "all buckets / admin" token is a finding, not a convenience
+   (see the `tipso-terraform-r2` incident — an undocumented account-wide admin
+   token nobody could identify two days later).
+4. **Encrypt before the sitting ends.** `age -r <owner's recipient>` → commit in
+   the owner's repo. The plaintext on your clipboard/screen is the only copy
+   outside git — it should die with the browser tab.
+5. **Document it where its owner documents secrets** — same commit. Devbox:
+   the inventory table above. tipso: its `docs/runbooks/secrets.md`. A token
+   that's not in its owner's inventory doc doesn't exist as far as the next
+   session is concerned — that's how mystery credentials are born.
+6. **Terraform state?** Per-repo R2 bucket (`<repo>-backup`), EU, created
+   out-of-band, accessed via an Account API token scoped to that bucket only —
+   which itself goes through steps 1–5.
+
+If a credential already exists somewhere that violates this (a loose Bitwarden
+entry, a gitignored plaintext, an unscoped token), **fix it now or revoke it** —
+don't build on top of drift.
+
 ## Decrypting for verification or debugging
 
 Sometimes you just want to read a secret (rotate it, debug, sanity-check that the right value is in there).
