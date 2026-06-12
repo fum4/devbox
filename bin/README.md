@@ -7,6 +7,7 @@ Small utility scripts run from the **laptop** (not the VPS). Invoked directly: `
 | Script | Purpose |
 |---|---|
 | `doctor` | Verify the laptop is in a state where `ansible-playbook` will succeed. Read-only — reports what's missing, doesn't mutate anything. |
+| `devbox-tf` | Terraform wrapper for `terraform/devbox/`: loads the R2 state creds (`.r2-backend.env`), cd's to the right dir, forwards all args to `terraform`. The one deliberate exception to "read-only by default" — `apply`/`destroy` mutate the VPS's existence ([`docs/terraform.md`](../docs/terraform.md)). |
 
 ## When to run `doctor`
 

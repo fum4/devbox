@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# bin/devbox-tf — run Terraform for the devbox VPS (terraform/devbox/) with the
+# R2 state-backend credentials loaded.
+#
+# Thin pass-through: `devbox-tf plan`, `devbox-tf apply`, `devbox-tf import …` —
+# anything after the script name goes straight to terraform. What it adds:
+#   - cd's to terraform/devbox regardless of cwd
+#   - sources .r2-backend.env (R2 state creds) into the environment
+#   - fails early, with a pointer, when a cred file is missing
+#
+# Runs on the LAPTOP (lane-2 creds live there — docs/secrets.md → "The two
+# lanes"; the box can't rebuild itself anyway). See docs/terraform.md.
+set -euo pipefail
+
+TF_DIR="$(cd "$(dirname "$0")/../terraform/devbox" && pwd)"
+cd "$TF_DIR"
+
+if [[ ! -f .r2-backend.env ]]; then
+  echo "ERROR: $TF_DIR/.r2-backend.env missing (R2 state creds)." >&2
+  echo "       Restore from Bitwarden per .r2-backend.env.example + docs/terraform.md." >&2
+  exit 2
+fi
+
+if [[ ! -f terraform.tfvars ]]; then
+  echo "ERROR: $TF_DIR/terraform.tfvars missing (Hetzner API token)." >&2
+  echo "       Restore from Bitwarden per terraform.tfvars.example + docs/terraform.md." >&2
+  exit 2
+fi
+
+set -a
+# shellcheck source=/dev/null
+. ./.r2-backend.env
+set +a
+
+exec terraform "$@"
