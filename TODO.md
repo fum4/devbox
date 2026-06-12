@@ -33,6 +33,35 @@ job, the same laptop-only way it delivers its own identity. See `docs/secrets.md
 > Depends on kost first generating its own age key — see kost `TODO.md`. The two
 > are a pair: kost owns its encrypted secrets; the devbox delivers the key.
 
+## Build the Hermes standalone personal/business assistant
+
+**Why:** run Hermes Agent as a private calendar/finance/briefing concierge —
+separate from the dev flows, on its own VPS. Full security-first design in
+[`docs/hermes-assistant.md`](docs/hermes-assistant.md) (distinct from the
+orchestration eval in `docs/hermes.md`). Deferred 2026-06-12 — design agreed,
+build not started. Owner wants to spike on **Claude subscription OAuth** first
+(€0), graduate to a dedicated Anthropic API key later.
+
+**Non-negotiables (from the design):**
+- Separate cheap Hetzner VPS, own Unix user, **own age key** (not devbox's, not
+  accounting-sync's), Tailscale-only. No dev/GitHub/finance credentials on it.
+- accounting-sync **stays on the dev box**; Hermes reads only the committed
+  `backups/*.csv` via a **read-only deploy key** — never StartCo/Google
+  credentials. (The `*.age` blobs are inert without the accounting age key, which
+  this box deliberately won't have.)
+- **Anthropic only** for this data (jurisdiction/no-train) — never a China-hosted
+  API for financials. See doc's "Why not the Chinese providers".
+- Read-only integrations first; messaging out to the owner only (prompt-injection
+  exfiltration is the headline risk). Email triage added **last**, isolated.
+
+**First steps:**
+- [ ] Provision the separate VPS (decide: second host in this Ansible inventory
+  with its own secrets bundle, vs own repo — leaning shared-repo/separate-secrets).
+- [ ] Install Hermes declaratively (uv + pinned release tag, not `curl|bash`);
+  systemd user unit for the gateway (mirror `claude@.service`).
+- [ ] Spike on Claude OAuth; build the finance-view skill against `backups/*.csv`.
+- [ ] Resolve the open decisions in `docs/hermes-assistant.md`.
+
 ## Wire up ntfy push notifications
 
 **Why:** ntfy is installed but dormant. Phone-driven sessions would benefit from

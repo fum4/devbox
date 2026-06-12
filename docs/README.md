@@ -48,6 +48,7 @@ Not a docs flow — use the `clone-repo` skill on the devbox itself. Either tell
 | [`sessions.md`](sessions.md) | Anyone hosting agent sessions or dev servers | How sessions (systemd+dtach) and dev servers (process-compose) are supervised; spawn / attach / restore / migrate |
 | [`skills.md`](skills.md) | Anyone adding/updating agent skills | Custom vs vendored skills, the easyskills manifest + pinning model, add/update/patch flows, security policy |
 | [`hermes.md`](hermes.md) | Anyone touching the orchestration layer | Evaluation of Hermes Agent as the orchestration brain: fit analysis, model strategy, migration plan, open decisions (status: not yet adopted) |
+| [`hermes-assistant.md`](hermes-assistant.md) | Building the standalone personal/business assistant | Security-first design for Hermes as a private calendar/finance/briefing concierge on its own VPS — data boundary, threat model, provider choice (status: design, not built) |
 | [`recovery.md`](recovery.md) | Incident response | Symptom → cause → fix matrix |
 
 ## Things NOT in this directory
