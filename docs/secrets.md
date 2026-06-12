@@ -167,6 +167,41 @@ its *key* is on the box.
 > assumes you can still log in. See `TODO.md` for the pending kost age-key
 > delivery role.
 
+## Global doctrine: age-in-git, keys in the password manager, state/backups in R2
+
+The patterns above aren't devbox-only — they're the **house rules for every repo**.
+A repo may add its own specifics, but the general shape is global:
+
+1. **Encrypt everything with `age`, committed to git.** No secret ever exists only
+   as gitignored plaintext. Ciphertext (`*.age`) lives next to whoever owns it.
+2. **Age private keys live in the password manager (Bitwarden).** That — plus the
+   provider account logins + 2FA recovery codes — is the root of trust. One key per
+   owner (the devbox's, each repo's), so a leak is contained and a key can be handed
+   to that repo's CI in isolation. The devbox *delivers* a repo's key; it doesn't
+   *store* the repo's secrets.
+3. **Durable state & backups live in Cloudflare R2.** Terraform state and any
+   nightly backups go to a **private, per-repo R2 bucket** (S3 backend), so a lost
+   laptop/devbox never orphans live infra — `terraform init` re-pulls it. The state
+   bucket is created **out-of-band** (bootstrap exception: the bucket holding
+   Terraform's own state can't be managed by that same Terraform).
+
+### The two lanes of secrets
+
+- **Lane 1 — the age store** (everything above this section): a box/repo's *identity*
+  secrets, age-encrypted in git, Ansible-delivered at provision.
+- **Lane 2 — Terraform creds**: what a `terraform apply` consumes — the Hetzner
+  `HCLOUD_TOKEN` (`terraform.tfvars`) and the R2 backend keys (`.r2-backend.env`).
+  **Laptop-only, gitignored, mode 0600**, root of trust in the password manager. A
+  self-contained product repo may also fold these into its own `secrets/*.age` +
+  `mise run secrets:decrypt` (tipso does); the devbox's own box keeps them as
+  Bitwarden-backed gitignored files. Lane 2 is **not** the age store — don't conflate.
+
+**Cross-repo rule:** each repo owns its own infra (`infra/terraform/` + its own state
+bucket); the devbox provisions only *itself* (`terraform/devbox/`). Reference
+implementation + recover/rotate/disaster runbooks: tipso `infra/terraform/` and
+`tipso/docs/runbooks/{secrets,disaster-recovery}.md`. Devbox-specific Terraform
+mechanics: [`terraform.md`](terraform.md) (once the devbox Terraform lands).
+
 ## Decrypting for verification or debugging
 
 Sometimes you just want to read a secret (rotate it, debug, sanity-check that the right value is in there).
