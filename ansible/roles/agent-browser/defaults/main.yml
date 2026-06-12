@@ -1,0 +1,5 @@
+---
+# Pinned release of vercel-labs/agent-browser. Bump deliberately:
+# check `gh api repos/vercel-labs/agent-browser/releases/latest --jq .tag_name`,
+# update here, re-run `devbox-reprov --tags agent-browser`.
+agent_browser_version: "v0.27.2"

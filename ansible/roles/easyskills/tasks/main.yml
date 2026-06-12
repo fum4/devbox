@@ -30,7 +30,7 @@
   args:
     executable: /bin/bash
   become_user: "{{ devbox_user }}"
-  changed_when: false # cargo is incremental; a no-op rebuild is the common case
+  changed_when: false  # cargo is incremental; a no-op rebuild is the common case
   when: easyskills_repo.stat.exists
 
 - name: Symlink ~/.local/bin/easyskills → release binary

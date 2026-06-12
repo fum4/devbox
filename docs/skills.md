@@ -74,16 +74,23 @@ every install/update as a supply-chain event:
 
 See `easyskills --global list` (or read `easyskills/skills.toml`) — the
 manifest is the truth, this doc deliberately doesn't duplicate the list.
-First batch (2026-06-12) was security-reviewed file-by-file: 10 clean, 1
-hardened by patch (`find-skills`, above).
+Every batch is security-reviewed file-by-file before its pins are committed
+(first two batches 2026-06-12: one hardening patch — `find-skills`, above).
+
+## agent-browser
+
+The `agent-browser` skill drives the **`agent-browser` CLI** (native Rust,
+client/daemon over CDP) — the devbox's tool for ad-hoc browser checks
+("open the app and look"): `snapshot -i` → numbered refs → `click @e1` /
+`fill @e2 …` → re-snapshot. Headless by default; per-repo Playwright e2e
+suites are a separate concern. The binary + its Chrome-for-Testing download
+are provisioned by the `agent-browser` ansible role (pinned release in the
+role's `defaults/main.yml`); system libs come from `playwright-deps`.
 
 ## Known upstream quirks
 
 - `anthropics/skills` is installed via the **subpath form**
-  (`github:anthropics/skills/skills/frontend-design`) because the repo contains
-  an unrelated skill whose `description` exceeds the spec's 1024-char limit and
+  (`github:anthropics/skills/skills/<name>`) because the repo contains an
+  unrelated skill whose `description` exceeds the spec's 1024-char limit and
   easyskills currently fails the whole source on any invalid skill — see
   easyskills `TODO.md` (validate only selected skills).
-- `agent-browser` (wanted for ad-hoc browser verification) is **deferred**: its
-  skill drives a binary we don't yet provision (no global node by design) —
-  see `TODO.md`.

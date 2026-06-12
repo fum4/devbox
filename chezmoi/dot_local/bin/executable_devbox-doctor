@@ -47,7 +47,7 @@ check_symlink() {
 }
 
 section "Binaries on PATH"
-for bin in mise zellij claude cs gh rg fd jq age docker chezmoi tailscale wt zj devbox-reprov devbox-scaffold easyskills; do
+for bin in mise zellij claude cs gh rg fd jq age docker chezmoi tailscale wt zj devbox-reprov devbox-scaffold easyskills agent-browser; do
     check "$bin" "command -v $bin" "missing — re-run \`devbox-reprov\` to reinstall the relevant role"
 done
 
