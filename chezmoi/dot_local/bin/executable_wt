@@ -36,6 +36,10 @@ USAGE
                           Also works from a main checkout sitting on the feature branch
                           (merges, then returns the checkout to <default>).
   wt rm <task> [--force]  Remove a worktree. Refuses unless PR is MERGED (or --force).
+  wt wip [path]           WIP report for a checkout: branch, uncommitted, stashes,
+                          unpushed, PR state, gitignored env files.
+  wt env [task]           Mirror gitignored .env* files from the main checkout into a
+                          worktree (never overwrites). Runs automatically after wt new.
   wt help                 Show this help.
 
   For listing worktrees use `git worktree list`. To spawn a worktree-backed
@@ -47,7 +51,7 @@ CONVENTIONS
   branch  defaults to the task name
   path    ../<repo>-<task> (sibling to the main checkout)
 
-See ~/.agents/skills/parallel-work/SKILL.md for when to use which command.
+When to use a worktree: see AGENTS.md → "When to use a worktree".
 EOF
 }
 
@@ -66,10 +70,93 @@ cmd_new() {
     [[ -e "$wt_path" ]] && die "$wt_path already exists"
 
     git worktree add "$wt_path" -b "$task" "origin/$default"
+    mirror_env_files "$repo_root" "$wt_path"
     echo
     echo "Worktree: $wt_path"
     echo "Branch:   $task (from origin/$default)"
     echo "Next:     cd $wt_path"
+}
+
+# Mirror gitignored env files (.env, .env.local, apps/*/.env*, …) from one
+# checkout into another at the same relative paths. Never overwrites. Flags
+# host-pointing values for human judgment (can't be rewritten safely).
+# --directory collapses fully-ignored dirs (node_modules) — fast, and avoids
+# matching junk inside them; the trade-off is that an env file living INSIDE an
+# ignored dir isn't found (document those per-repo, per AGENTS.md).
+mirror_env_files() {
+    local src="$1" dst="$2" f copied=0 hosty=()
+    while IFS= read -r f; do
+        [[ -z "$f" ]] && continue
+        [[ -e "$dst/$f" ]] && continue          # never overwrite
+        mkdir -p "$dst/$(dirname "$f")"
+        cp "$src/$f" "$dst/$f"
+        copied=$((copied + 1))
+        echo "  env: mirrored $f"
+        if grep -qE 'localhost|127\.0\.0\.1|[0-9]{1,3}(\.[0-9]{1,3}){3}' "$dst/$f"; then
+            hosty+=("$f")
+        fi
+    done < <(git -C "$src" ls-files --others --ignored --exclude-standard --directory \
+             | grep -E '(^|/)\.env[^/]*$' || true)
+    if [[ "$copied" -gt 0 && "${#hosty[@]}" -gt 0 ]]; then
+        echo "  env: check host-pointing values (localhost/IPs) in: ${hosty[*]}"
+        echo "       (laptop-authored envs may need the devbox Tailscale FQDN)"
+    fi
+}
+
+cmd_env() {
+    is_in_repo || die "not inside a git repo"
+    local main current src dst
+    main=$(repo_main_worktree)
+    current=$(git rev-parse --show-toplevel)
+
+    if [[ -n "${1:-}" ]]; then
+        dst="${main}-${1}"
+        [[ -d "$dst" ]] || dst=$(git worktree list --porcelain \
+                                 | awk -v t="$1" '/^worktree / && index($2, t){print $2; exit}')
+        [[ -n "$dst" && -d "$dst" ]] || die "no worktree matching '$1'"
+    else
+        [[ "$current" == "$main" ]] && die "run 'wt env' from inside a worktree, or pass <task>"
+        dst="$current"
+    fi
+    src="$main"
+    [[ "$src" == "$dst" ]] && die "source and destination are the same checkout"
+
+    mirror_env_files "$src" "$dst"
+    echo "env files mirrored: $src → $dst (existing files untouched)"
+}
+
+cmd_wip() {
+    local path="${1:-.}"
+    git -C "$path" rev-parse --git-dir >/dev/null 2>&1 || die "not a git checkout: $path"
+
+    local root branch default gd gcd kind upstream pr envs
+    root=$(git -C "$path" rev-parse --show-toplevel)
+    branch=$(git -C "$root" symbolic-ref --short HEAD 2>/dev/null || echo "DETACHED")
+    gd=$(git -C "$root" rev-parse --git-dir)
+    gcd=$(git -C "$root" rev-parse --git-common-dir)
+    if [[ "$gd" == "$gcd" ]]; then kind="main-checkout"; else kind="linked-worktree"; fi
+    default=$(git -C "$root" symbolic-ref --quiet refs/remotes/origin/HEAD 2>/dev/null \
+        | sed 's|refs/remotes/origin/||' || echo "main")
+
+    echo "checkout: $root ($kind)"
+    echo "branch: $branch (default: $default)"
+    echo "uncommitted: $(git -C "$root" status --porcelain | wc -l)"
+    echo "stashes: $(git -C "$root" stash list | wc -l)"
+    if upstream=$(git -C "$root" rev-parse --abbrev-ref '@{u}' 2>/dev/null); then
+        echo "unpushed: $(git -C "$root" rev-list --count '@{u}..HEAD') (ahead of $upstream)"
+    else
+        echo "unpushed: no upstream (branch never pushed)"
+    fi
+    if [[ "$branch" == "$default" || "$branch" == "DETACHED" ]]; then
+        echo "pr: n/a"
+    else
+        pr=$(cd "$root" && gh pr list --head "$branch" --state all \
+             --json number,state --jq '.[0] | "#\(.number) \(.state)"' 2>/dev/null || true)
+        echo "pr: ${pr:-none}"
+    fi
+    envs=$(git -C "$root" ls-files --others --ignored --exclude-standard --directory \
+           | grep -E '(^|/)\.env[^/]*$' | paste -sd' ' - || true)
+    echo "env-files: ${envs:-none}"
 }
 
 cmd_pr() {
@@ -195,6 +282,8 @@ case "$cmd" in
     pr)             cmd_pr "$@" ;;
     merge)          cmd_merge "$@" ;;
     rm)             cmd_rm "$@" ;;
+    wip)            cmd_wip "$@" ;;
+    env)            cmd_env "$@" ;;
     help|--help|-h) cmd_help ;;
     *)              die "unknown command: $cmd (try 'wt help')" ;;
 esac
