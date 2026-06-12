@@ -1,0 +1,36 @@
+--- original
++++ modified
+@@ -88,7 +88,7 @@
+ (185K installs)
+
+ To install it:
+-npx skills add vercel-labs/agent-skills@react-best-practices
++easyskills --global add github:vercel-labs/agent-skills --include react-best-practices
+
+ Learn more: https://skills.sh/vercel-labs/agent-skills/react-best-practices
+ ```
+@@ -95,13 +95,21 @@
+
+ ### Step 6: Offer to Install
+
+-If the user wants to proceed, you can install the skill for them:
++> **Devbox policy (local patch):** installs on this machine go through
++> **easyskills**, never `npx skills add` — the manifest in the devbox repo
++> (`$EASYSKILLS_HOME/skills.toml`) is the declarative source of truth, and its
++> pins must be committed. **Never install without the user's explicit
++> confirmation**, and read the new skill's SKILL.md (security pass) before
++> committing the manifest change. See devbox `docs/skills.md`.
++
++If — and only if — the user explicitly confirms, install with:
+
+ ```bash
+-npx skills add <owner/repo@skill> -g -y
++easyskills --global add github:<owner>/<repo> --include <skill-name>
+ ```
+
+-The `-g` flag installs globally (user-level) and `-y` skips confirmation prompts.
++Then review the fetched skill's files, and commit the `skills.toml` change in
++`~/code/devbox` so the install survives a rebuild.
+
+ ## Common Skill Categories
+

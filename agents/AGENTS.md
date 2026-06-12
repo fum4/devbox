@@ -17,7 +17,7 @@ Then proceed with the user's actual request. (This ritual is global across all r
 
 - **Repos**: `~/code/<project-name>/` (e.g. `~/code/tipso`). Each is its own git repo.
 - **VPS infra source**: `~/code/devbox`.
-- **Cross-agent home**: `~/code/devbox/agents/` — `./AGENTS.md` (this file) and `./skills/` (loaded on demand).
+- **Cross-agent home**: `~/code/devbox/agents/` — `./AGENTS.md` (this file) and `./skills/` (our custom skills, loaded on demand). Third-party **vendored skills** are pinned in `~/code/devbox/easyskills/skills.toml` and managed with `easyskills`; both kinds land as symlinks in `~/.agents/skills/`. See [`docs/skills.md`](../docs/skills.md).
 - **Agent sessions**: each is a systemd user unit `claude@<name>.service` (durable, isolated, phone-driveable). Spawn with `claude-spawn`, restore after a reboot with `claude-restore`. See [`docs/sessions.md`](../docs/sessions.md).
 - **Dev servers**: per-project `process-compose` stacks, on-demand, run via `/serve`.
 - **Dashboards**: `zj <project>` opens a *disposable* Zellij view onto a project's live sessions + dev servers — it hosts nothing, so killing it loses nothing.
@@ -77,6 +77,7 @@ When you decide something is left to do and **postpone it** — a follow-up, a d
 | **`wt`** | Worktree + PR + merge wrapper (see below). Use this instead of raw `git worktree` / `gh pr` / other git related commands. |
 | **`gh`** | GitHub CLI. Use for git related actions not available through `wt`. |
 | **`devbox-scaffold`** | Generate `.mise.toml` + `zellij.kdl` for a new repo. Invoked via the [`clone-repo`](skills/clone-repo/SKILL.md) skill, which inspects the repo and proposes the right args before running. |
+| **`easyskills`** | Vendored-skills manager (our own tool, built from `~/code/easyskills`). Manifest + commit pins live in `~/code/devbox/easyskills/skills.toml` (`$EASYSKILLS_HOME`); add/update/patch flows + security policy in [`docs/skills.md`](../docs/skills.md). Installs always need explicit user confirmation + a read of the fetched SKILL.md. |
 | **`devbox-reprov`** | Re-run the Ansible playbook locally on the devbox (`git pull` then `ansible-playbook --connection=local`). Use this after editing a role/chezmoi source to apply changes without needing the laptop. Pass `--check --diff` for dry-run, `--tags <role>` for a narrow re-run. |
 | **`devbox-doctor`** | Read-only health check for the box (binaries on PATH, Tailscale + SSH, docker, agent-layer symlinks, repo cleanliness, free disk + memory). Run after a `devbox-reprov` to smoke-test, or any time things feel off. Exit code = number of failures. |
 | **ripgrep** (`rg`), **fd**, **jq** | Search and JSON parsing. Prefer over `grep -r` / `find` / `python -m json.tool`. |
@@ -215,5 +216,7 @@ Per-repo specifics (architecture layers, naming, file-size limits) live in that 
 | Health-check the box | `devbox-doctor` |
 | See active sessions + worktrees | `/sessions` skill (or the `claude-sessions` helper for raw facts) |
 | List available skills | `/help` skill |
+| Add a vendored (third-party) skill | `easyskills --global add github:<owner>/<repo> --include <skill>` → security-read it → commit `skills.toml` (policy: [`docs/skills.md`](../docs/skills.md)) |
+| Update vendored skills | `easyskills --global outdated` → `easyskills --global update` → review diff → commit |
 
 For onboarding a new repo onto the devbox, the `clone-repo` skill walks through clone → inspect → confirm → scaffold.

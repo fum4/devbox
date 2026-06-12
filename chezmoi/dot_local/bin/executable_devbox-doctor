@@ -47,7 +47,7 @@ check_symlink() {
 }
 
 section "Binaries on PATH"
-for bin in mise zellij claude cs gh rg fd jq age docker chezmoi tailscale wt zj devbox-reprov devbox-scaffold; do
+for bin in mise zellij claude cs gh rg fd jq age docker chezmoi tailscale wt zj devbox-reprov devbox-scaffold easyskills; do
     check "$bin" "command -v $bin" "missing — re-run \`devbox-reprov\` to reinstall the relevant role"
 done
 
@@ -85,12 +85,34 @@ fi
 
 section "Agent-layer symlinks"
 check_symlink "$HOME/.agents/AGENTS.md"
-check_symlink "$HOME/.agents/skills"
 check_symlink "$HOME/.claude/CLAUDE.md"
 check_symlink "$HOME/.claude/skills"
 check_symlink "$HOME/.claude/settings.json"
 check_symlink "$HOME/.codex/AGENTS.md"
 check_symlink "$HOME/.codex/skills"
+
+# ~/.agents/skills is a real directory of per-skill symlinks (custom → devbox
+# repo, vendored → the easyskills store). Healthy = a dir with no broken links.
+if [[ -d "$HOME/.agents/skills" && ! -L "$HOME/.agents/skills" ]]; then
+    broken=$(find "$HOME/.agents/skills" -maxdepth 1 -xtype l | wc -l)
+    if (( broken == 0 )); then
+        pass "~/.agents/skills is a real dir, no broken skill links ($(find "$HOME/.agents/skills" -maxdepth 1 -type l | wc -l) skills)"
+    else
+        warn "~/.agents/skills has $broken broken skill link(s)" "re-run \`devbox-reprov --tags agents,easyskills\`"
+    fi
+else
+    fail "~/.agents/skills" "expected a real directory of per-skill symlinks — re-run \`devbox-reprov --tags agents\`"
+fi
+
+section "Vendored skills (easyskills)"
+if [[ -f "$HOME/code/devbox/easyskills/skills.toml" ]]; then
+    pass "manifest present (devbox repo: easyskills/skills.toml)"
+    check "vendored skills restore cleanly" \
+          "EASYSKILLS_HOME=\"$HOME/code/devbox/easyskills\" easyskills --global --offline --locked install >/dev/null" \
+          "pins drifted or store missing — run \`easyskills --global install\` (online) and commit any manifest change"
+else
+    warn "no vendored-skills manifest" "expected at ~/code/devbox/easyskills/skills.toml (see docs/skills.md)"
+fi
 
 section "Resources"
 mem_free_mb=$(awk '/MemAvailable:/ { printf "%d", $2 / 1024 }' /proc/meminfo)

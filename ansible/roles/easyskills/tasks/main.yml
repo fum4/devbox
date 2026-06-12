@@ -1,0 +1,53 @@
+---
+# easyskills — build the binary from the cloned repo and install the vendored
+# (third-party) skill set pinned in ~/code/devbox/easyskills/skills.toml.
+#
+# The easyskills home lives INSIDE the devbox repo (via $EASYSKILLS_HOME, set
+# in chezmoi's dot_bashrc and explicitly below): the manifest with its commit
+# pins is committed; the .skills/ store next to it is gitignored. `install
+# --locked` is the `npm ci` of skills — a rebuilt box gets byte-identical
+# skills. See docs/skills.md.
+#
+# Preconditions (site.yml ordering): `repos` cloned fum4/easyskills and ran its
+# mise setup; `agents` made ~/.agents/skills a real directory to link into.
+
+- name: Check that the easyskills repo is cloned
+  stat:
+    path: "/home/{{ devbox_user }}/code/easyskills/.mise.toml"
+  register: easyskills_repo
+
+- name: Notice — easyskills repo missing, skipping role
+  debug:
+    msg: "~/code/easyskills not cloned (repos role gated on gh auth?); re-run with --tags repos,easyskills once auth is set up."
+  when: not easyskills_repo.stat.exists
+
+- name: Build easyskills (release)
+  shell: |
+    set -euo pipefail
+    cd "/home/{{ devbox_user }}/code/easyskills"
+    "/home/{{ devbox_user }}/.local/bin/mise" trust --quiet || true
+    "/home/{{ devbox_user }}/.local/bin/mise" exec -- cargo build --release -p easyskills-cli
+  args:
+    executable: /bin/bash
+  become_user: "{{ devbox_user }}"
+  changed_when: false # cargo is incremental; a no-op rebuild is the common case
+  when: easyskills_repo.stat.exists
+
+- name: Symlink ~/.local/bin/easyskills → release binary
+  file:
+    src: "/home/{{ devbox_user }}/code/easyskills/target/release/easyskills"
+    dest: "/home/{{ devbox_user }}/.local/bin/easyskills"
+    state: link
+    force: true
+    owner: "{{ devbox_user }}"
+    group: "{{ devbox_user }}"
+  when: easyskills_repo.stat.exists
+
+- name: Install vendored skills (pinned, from the committed manifest)
+  command: "/home/{{ devbox_user }}/.local/bin/easyskills --global install --locked"
+  environment:
+    EASYSKILLS_HOME: "/home/{{ devbox_user }}/code/devbox/easyskills"
+  become_user: "{{ devbox_user }}"
+  register: easyskills_install
+  changed_when: "'+' in easyskills_install.stdout"
+  when: easyskills_repo.stat.exists
