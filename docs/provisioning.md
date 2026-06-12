@@ -19,7 +19,7 @@ Three contexts appear in this doc; every code block is labeled with one of them.
 All set-up done once. If any are missing, do them first:
 
 - Laptop set up per [laptop.md](laptop.md) (`secrets.local` restored, ansible/age/gh installed, SSH keys generated)
-- Hetzner account ready per [hetzner.md](hetzner.md) (project + SSH key uploaded)
+- Hetzner account ready per [hetzner.md](hetzner.md) (project + API token), Terraform bootstrapped per [terraform.md](terraform.md) (R2 state bucket + lane-2 creds restored)
 - Tailscale account ready per [tailscale.md](tailscale.md), with the OAuth client bootstrapped (`ansible/secrets/tailscale-oauth.age` committed)
 - GitHub identity bootstrapped per [github.md](github.md) (`ansible/secrets/github-*.age` committed)
 
@@ -37,48 +37,40 @@ Anything reported as "modified" or "unpushed" needs to be committed + pushed bef
 
 If there's nothing surprising, proceed.
 
-### When to destroy the old VPS
+### Rebuilds are sequential (one IP, one box)
 
-Two safe options:
+The box's IPv4 is a **stable primary IP** that moves from the old server to the new one ([terraform.md](terraform.md)) — which means old and new **can't run side by side**. The rebuild order is: destroy old → apply new (same IP). Your safety nets are §0's WIP sweep (everything durable is in git / `*.age` / R2 anyway) and, if you want belt-and-braces, a Hetzner snapshot right before destroying (Console → server → ⋮ → Snapshot; delete it in §8 once the new box works).
 
-- **Destroy now** (cheaper, no safety net): follow [hetzner.md §5 → Destroying a VPS](hetzner.md#5-create-a-vps) before step 1. Then step 1 creates the new box on a clean slate.
-- **Destroy after verification** (recommended for first-time rebuilds): keep the old box running through steps 1–7. Once the new box is fully working + phone-driveable, destroy the old one in §8 Cleanup. The overlap costs ~3 cents (Hetzner bills hourly, prorated). If the new box turns out broken, you can ssh back into the old one.
-
-## 1. Create the VPS
-
-Follow [hetzner.md §5 → Create a VPS](hetzner.md#5-create-a-vps). Copy the IPv4 address when it's running — step 2 needs it.
-
-## 2. Update local config with the new IP
+## 1. Recreate the VPS (Terraform)
 
 **On the laptop:**
 
 ```bash
-# Clear stale known_hosts (the old VPS's host key is invalid for the new IP)
-ssh-keygen -R <NEW_IPv4>
-
-# Update ~/.ssh/config — Host devbox HostName → new IP
-$EDITOR ~/.ssh/config
-
-# Update ansible inventory — set ansible_host + ansible_user=root for the first run
-$EDITOR ~/_work/devbox/ansible/inventory.ini
+cd ~/_work/devbox
+bin/devbox-tf destroy -target=hcloud_server.devbox   # rebuild only: removes the old box; the IP survives
+bin/devbox-tf apply                                  # new Debian 12 box, SAME IPv4
 ```
 
-Inventory should look like:
+First-ever setup (no box yet, no creds yet): do the one-time bootstrap in [terraform.md](terraform.md) first, then just `bin/devbox-tf apply`.
 
-```ini
-[devbox]
-vps ansible_host=<NEW_IPv4>
+## 2. Reset the host key (the IP didn't change)
 
-[devbox:vars]
-ansible_user=root
-ansible_ssh_private_key_file=~/.ssh/devbox_vps
-ansible_ssh_common_args='-o StrictHostKeyChecking=accept-new'
+`~/.ssh/config` and `ansible/inventory.ini` already point at the right IP — the primary IP survived the rebuild, so there's nothing to update. (First-ever setup only: put the `apply` output's IP into both, once; the inventory shape is in `ansible/inventory.ini.example`.) Two things remain:
+
+**On the laptop:**
+
+```bash
+# A new box has a new HOST KEY even on the old IP — clear the stale entry
+ssh-keygen -R <IPv4>
+
+# Ansible must come in as root for the first run (base creates fum4, hardening locks root)
+$EDITOR ~/_work/devbox/ansible/inventory.ini    # ansible_user=root
 ```
 
 Smoke test, **on the laptop** (the `uname -a` itself executes on the VPS but `ssh` is initiated from here):
 
 ```bash
-ssh -i ~/.ssh/devbox_vps root@<NEW_IPv4> 'uname -a'
+ssh -i ~/.ssh/devbox_vps root@<IPv4> 'uname -a'
 # Expected: Linux ... Debian 12 ...
 ```
 
@@ -209,7 +201,7 @@ For Expo Go testing (mobile apps): see [mobile.md](mobile.md) step 3.
 
 ### The old VPS (rebuilds only)
 
-If you kept the old VPS running through verification (per §0 → "When to destroy the old VPS"), destroy it now that the new box works: [hetzner.md §5 → Destroying a VPS](hetzner.md#5-create-a-vps). Billing stops at the second of deletion — leaving it running costs €6.49/mo for a ghost box.
+Nothing to do — §1's `destroy -target` already removed it (rebuilds are sequential now; see §0). If `bin/devbox-tf plan` reports anything unexpected, reconcile before walking away.
 
 ### Tailscale admin
 
@@ -227,18 +219,19 @@ If you took a snapshot before destruction (for insurance), delete it now that th
 
 After everything's set up:
 
-1. Hetzner UI: create VPS (~1 min click-around)
-2. Edit two files locally (inventory + ssh config + ssh-keygen -R) (~1 min)
+1. `bin/devbox-tf destroy -target=… && bin/devbox-tf apply` (~1 min, mostly waiting)
+2. `ssh-keygen -R <ip>` + flip inventory to `ansible_user=root` (~30 sec)
 3. `claude /login` (interactive OAuth) (~30 sec)
 4. Per project: `zj <repo>` + `/remote-control` (interactive)
 
-Everything else is one command: `ansible-playbook ...`. Tailscale auth is fully automated via the OAuth client (see [tailscale.md](tailscale.md) section 6).
+Everything else is one command: `ansible-playbook ...`. Tailscale auth is fully automated via the OAuth client (see [tailscale.md](tailscale.md) section 6); the IP never changes, so no config files to touch.
 
 ## Things that go wrong (and where to look)
 
 | Symptom | Where |
 |---|---|
-| `ssh root@<ip>` fails with "Permission denied" | Hetzner SSH key entry not ticked when creating VPS — recreate or attach key via UI |
+| `ssh root@<ip>` fails with "Permission denied" | The `hcloud_ssh_key` didn't match your laptop key — check `terraform/devbox/variables.tf` `ssh_public_key_path` and re-apply ([terraform.md](terraform.md)) |
+| `bin/devbox-tf` fails (creds, state, 401) | [terraform.md](terraform.md) → "Things that go wrong" |
 | `tailscale up` fails with auth | OAuth client revoked / `tag:devbox` not in tagOwners — see [tailscale.md](tailscale.md) section 6 and [recovery.md](recovery.md) |
 | `gh auth status` fails | PAT expired — rotate per [github.md](github.md) |
 | `git clone` fails despite identity installed | Stale `.pub` issue or new GitHub key wasn't registered — [recovery.md](recovery.md) |

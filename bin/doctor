@@ -102,6 +102,22 @@ check "ansible/site.yml parses" \
       "ansible-playbook --syntax-check ansible/site.yml" \
       "Playbook has a syntax error — run with -vvv for details"
 
+section "Terraform (terraform/devbox — see docs/terraform.md)"
+check "terraform on PATH" \
+      "command -v terraform" \
+      "brew install terraform (laptop) / mise install (box) — docs/terraform.md"
+check "terraform.tfvars present (Hetzner token)" \
+      "[[ -f terraform/devbox/terraform.tfvars ]]" \
+      "Restore from Bitwarden per terraform/devbox/terraform.tfvars.example"
+check ".r2-backend.env present (R2 state creds)" \
+      "[[ -f terraform/devbox/.r2-backend.env ]]" \
+      "Restore from Bitwarden per terraform/devbox/.r2-backend.env.example"
+if command -v terraform >/dev/null 2>&1; then
+  check "config validates" \
+        "terraform -chdir=terraform/devbox init -backend=false -input=false && terraform -chdir=terraform/devbox validate" \
+        "Config error — run the command yourself for details"
+fi
+
 echo
 if [[ $fails -eq 0 ]]; then
   printf "%sAll checks passed.%s Laptop is ready to run ansible-playbook.\n" "$GREEN" "$RESET"

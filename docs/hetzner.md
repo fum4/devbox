@@ -1,8 +1,8 @@
 # Hetzner Cloud setup
 
-Everything Hetzner-UI: account setup (one-time per account, sections 1–4) plus the per-rebuild create/destroy server flow (section 5). Provider-specific knowledge stays in this one file; the post-create configuration flow lives in [provisioning.md](provisioning.md).
+The Hetzner-UI parts that **stay manual**: account setup (one-time per account, sections 1–3) and the API token Terraform authenticates with (section 4). Creating/destroying the VPS itself is **no longer a UI flow** — it's Terraform (section 5 → [terraform.md](terraform.md)). Provider-specific knowledge stays in this one file; the post-create configuration flow lives in [provisioning.md](provisioning.md).
 
-**End state after sections 1–4**: account verified, payment on file, project `dev` exists, your laptop's SSH key (`devbox_vps.pub`) is uploaded under Security. From there, section 5 is what you run on every rebuild.
+**End state after sections 1–4**: account verified, payment on file, project `dev` exists, an API token for that project sits in `terraform/devbox/terraform.tfvars` (+ Bitwarden). From there, section 5 is one command.
 
 ## Prerequisites
 
@@ -47,45 +47,31 @@ Click **New Project** (top right). Name it `dev` (or whatever). Click into the p
 
 Each project is a billing + access boundary. One project for the devbox is enough.
 
-## 4. Upload the laptop's SSH public key
+## 4. Create an API token for Terraform
 
-This is what lets your laptop log in to any VPS you create in this project.
+This is what lets Terraform manage servers in this project — the one credential the UI must mint (a token can't create itself).
 
-On the laptop:
+Hetzner Console → your project → sidebar → **Security** → **API tokens** → **Generate API token**:
+
+- **Description**: `devbox-terraform`
+- **Permissions**: **Read & Write**
+
+Copy the token (shown once) into `terraform/devbox/terraform.tfvars` (gitignored, mode 0600) **and** Bitwarden (*"devbox Hetzner API token"*). It's a lane-2 credential — see [secrets.md](secrets.md) → "The two lanes of secrets".
+
+(The laptop's SSH key no longer needs manual uploading — Terraform registers `~/.ssh/devbox_vps.pub` as an `hcloud_ssh_key` resource.)
+
+## 5. Create / destroy the VPS — via Terraform
+
+The server, its **stable primary IP**, the cloud firewall, and the SSH-key registration are all `terraform/devbox/` resources. The full runbook (bootstrap, adopting a running box, rebuild flow) is [terraform.md](terraform.md); the short version:
 
 ```bash
-pbcopy < ~/.ssh/devbox_vps.pub
+bin/devbox-tf apply                                  # create (or reconcile) the box
+bin/devbox-tf destroy -target=hcloud_server.devbox   # destroy ONLY the server; the IP survives
 ```
 
-In Hetzner Console (inside the `dev` project) → sidebar → **Security** → **SSH Keys** tab → **Add SSH Key**:
+The decisions the old UI form asked for are now code (`terraform/devbox/variables.tf`): Helsinki (hel1), Debian 12, CX33, name `devbox`, backups off. Because the primary IP outlives the server, a rebuild keeps the same IPv4 — no more copying IPs into config files ([provisioning.md](provisioning.md) §2 is now a no-op).
 
-- **Public Key**: paste (Cmd+V)
-- **Name**: `devbox` (matches the rest of the naming pattern — server name, SSH alias, Tailscale machine. Any label works; this is just for your reference in the Hetzner UI. If you'll eventually add a *second* machine to this project, use `laptop-personal` / `laptop-work` style instead.)
-- **Add SSH Key**
-
-The key now shows in the list with its fingerprint. Every future VPS you create can tick this key during the create-server form, and you'll be able to `ssh root@<new-ip>` immediately.
-
-## 5. Create a VPS
-
-This is the per-rebuild UI flow — same regardless of whether it's your first VPS or your Nth replacement. The output is a running Debian 12 box with your SSH key pre-installed; configuration happens via Ansible in [provisioning.md](provisioning.md).
-
-Hetzner Console → your project → **Servers** → **Add Server**:
-
-| Field | Value |
-|---|---|
-| Location | Helsinki (HEL1) |
-| Image | Debian 12 |
-| Type | Shared vCPU → CX33 |
-| Networking | Public IPv4 + IPv6 (defaults) |
-| SSH Keys | ✓ `devbox` (uploaded in step 4 above) |
-| Backups | off |
-| Name | `devbox` (becomes the hostname; consistent with the SSH alias + Tailscale machine name) |
-
-**Create & Buy now**. Wait ~30 sec for status to flip to **Running**. **Copy the IPv4 address** — you'll paste it into the inventory in [provisioning.md](provisioning.md) §2.
-
-### Destroying a VPS
-
-To replace one (rebuild flow): Hetzner Console → Servers → click the server → ⋮ → **Delete**. Confirms with the server name. Billing stops at the second of deletion. Snapshots taken beforehand persist (and cost ~€0.0119/GB/month) until deleted separately.
+Billing stops at the second of server deletion. A detached primary IP costs ~€0.50/mo while no server is attached (free while attached). Snapshots taken beforehand persist (~€0.0119/GB/month) until deleted separately.
 
 ## Recurring costs
 
@@ -117,6 +103,6 @@ Hetzner bills **hourly, prorated**. Deleting a VPS stops billing immediately. So
 
 ## When to revisit Hetzner
 
-- **Bigger VPS needed**: stop server → change type to CPX32 or CCX13 → start. Same IP, same disk, ~1 min downtime. Hetzner Console → server detail page → ⋮ → **Rescale**.
-- **Move regions**: not really — the IPs are region-bound. Easier to delete + recreate in the new region.
-- **Need a second VPS** (staging, side-project): create another in the same project. The SSH key from step 4 is already there; just tick it.
+- **Bigger VPS needed**: change `server_type` in `terraform/devbox/variables.tf` → `bin/devbox-tf apply` (in-place rescale: brief poweroff, same IP + disk; the disk grows irreversibly unless you set `keep_disk`). Avoid rescaling via the console — that's drift the next `plan` will fight.
+- **Move regions**: not really — the IPs are region-bound. Easier to delete + recreate in the new region (a `location` change forces replacement, and the primary IP can't follow).
+- **Need a second VPS** (staging, side-project): per the cross-repo rule ([secrets.md](secrets.md) → "Global doctrine"), that machine's repo brings its own Terraform + state bucket — don't add it to `terraform/devbox/`. Same Hetzner project is fine; mint it its own API token.

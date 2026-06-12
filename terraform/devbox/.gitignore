@@ -1,0 +1,16 @@
+# Secrets — never commit (lane 2: gitignored + Bitwarden, see docs/secrets.md).
+terraform.tfvars
+*.auto.tfvars
+.r2-backend.env
+
+# State lives in R2 (backend.tf); any local copy (e.g. from a backend migration
+# or `terraform state pull`) is sensitive — never commit.
+*.tfstate
+*.tfstate.*
+.terraform.tfstate.lock.info
+
+# Provider plugins / working dir.
+.terraform/
+crash.log
+
+# NOTE: .terraform.lock.hcl IS committed (pins provider checksums) — do not ignore it.

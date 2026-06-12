@@ -20,14 +20,14 @@ You're on a new machine and need to restore everything.
 
 1. **Set up the laptop from scratch** per [laptop.md](laptop.md) — Homebrew, age, ansible, gh, generate new SSH keys, clone the devbox repo.
 2. **Register the new laptop's GitHub key** on https://github.com/settings/keys (same fum4 account as the old laptop).
-3. **Restore `secrets.local`** from your password manager — see [`secrets.md`](secrets.md) → "Restoring on a new laptop" for the verification loop.
-4. **Update Hetzner** with the new laptop's `devbox_vps.pub` → Hetzner Console → Security → SSH Keys → Add (or replace the old `laptop` entry).
+3. **Restore `secrets.local`** from your password manager — see [`secrets.md`](secrets.md) → "Restoring on a new laptop" for the verification loop. Also restore the **lane-2 Terraform creds** from Bitwarden (`terraform/devbox/terraform.tfvars` + `.r2-backend.env`) — see [`terraform.md`](terraform.md) → "Restoring on a new laptop".
+4. **Update Hetzner** with the new laptop's `devbox_vps.pub`: it's a Terraform resource now — `bin/devbox-tf apply` re-registers it (replaces the `hcloud_ssh_key`; the running box's `authorized_keys` is step 5's job).
 5. **Update the existing VPS's `~/.ssh/authorized_keys`** so the new laptop can ssh in:
    - From any device that already has access (e.g. another laptop, or via the Hetzner Console *Rescue* mode), **on the VPS** (or in the Rescue console):
      ```bash
      echo "$(cat /path/to/new-laptop-devbox_vps.pub)" >> /home/fum4/.ssh/authorized_keys
      ```
-   - If you have no way in: easier to rebuild the VPS — Hetzner UI → create a new one with the new laptop's key, then run the playbook.
+   - If you have no way in: easier to rebuild the VPS — `bin/devbox-tf destroy -target=hcloud_server.devbox && bin/devbox-tf apply` (same IP), then run the playbook.
 6. **Delete the old laptop's keys from GitHub + Hetzner** to revoke its access.
 7. **Verify, on the laptop:**
    ```bash
@@ -88,7 +88,7 @@ Causes ordered by likelihood:
 ## `ssh devbox` fails — Permission denied / Connection refused
 
 1. **VPS down** — Hetzner Console → check Status. Reboot if needed (⋮ → Power → Restart).
-2. **IP changed** — public IP can change if the VPS was destroyed/recreated. Update `~/.ssh/config` Host devbox HostName + `inventory.ini` ansible_host.
+2. **IP changed** — shouldn't happen anymore (the primary IP survives rebuilds — [terraform.md](terraform.md)). If it genuinely did (IP resource destroyed?), `bin/devbox-tf plan` to see what Terraform thinks, and update `~/.ssh/config` + `inventory.ini` to the output IP.
 3. **`known_hosts` mismatch** — clear stale entry: `ssh-keygen -R <ip>` and retry (accept new host key).
 4. **You're trying as the wrong user** — `~/.ssh/config` should specify `User fum4`. Root SSH is disabled after the `hardening` role.
 5. **Tailscale dropped on the laptop** (if you use Tailscale-routed SSH) — toggle Tailscale off and on.
@@ -171,6 +171,14 @@ The user `fum4` must be in the `docker` group. The `docker` Ansible role adds th
 - If you opened a Zellij session **on the VPS** BEFORE the role ran, that session's panes don't have docker group → `docker` commands fail.
 - Fix: **on the VPS**, `exit` the Zellij session (`Ctrl+O d` to detach is not enough — actually exit each shell), reconnect (`ssh devbox` from the laptop), then **on the VPS** start fresh with `zj <project>`. New shells pick up the group.
 - Workaround if you don't want to restart shells: **on the VPS**, `newgrp docker` in the current shell, then docker works (only for that shell).
+
+## Terraform state or creds lost
+
+The live infra is never at risk from this — resources keep running regardless of state.
+
+- **`.r2-backend.env` / `terraform.tfvars` missing** (new laptop, deleted file): restore from Bitwarden — [`terraform.md`](terraform.md) → "Restoring on a new laptop".
+- **State lost / `devbox-backup` bucket deleted**: recreate the bucket (EU jurisdiction), `bin/devbox-tf init`, re-import the three live resources — [`terraform.md`](terraform.md) → "One-time bootstrap" step 3. A follow-up `plan` should show no changes.
+- **Hetzner token revoked/expired**: re-mint in the console (R/W, devbox project), update `terraform.tfvars` + Bitwarden.
 
 ## Whole-VPS rebuild from a degraded state
 

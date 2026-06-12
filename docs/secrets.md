@@ -200,7 +200,7 @@ A repo may add its own specifics, but the general shape is global:
 bucket); the devbox provisions only *itself* (`terraform/devbox/`). Reference
 implementation + recover/rotate/disaster runbooks: tipso `infra/terraform/` and
 `tipso/docs/runbooks/{secrets,disaster-recovery}.md`. Devbox-specific Terraform
-mechanics: [`terraform.md`](terraform.md) (once the devbox Terraform lands).
+mechanics: [`terraform.md`](terraform.md).
 
 ## Decrypting for verification or debugging
 

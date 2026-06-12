@@ -84,6 +84,7 @@ When you postpone something, record it in the root `TODO.md` of the repo it belo
 | **`easyskills`** | Vendored-skills manager (our own tool, built from `~/code/easyskills`). Manifest + commit pins live in `~/code/devbox/easyskills/skills.toml` (`$EASYSKILLS_HOME`); add/update/patch flows + security policy in [`docs/skills.md`](../docs/skills.md). Installs always need explicit user confirmation + a read of the fetched SKILL.md. |
 | **`devbox-reprov`** | Re-run the Ansible playbook locally on the devbox (`git pull` then `ansible-playbook --connection=local`). Use this after editing a role/chezmoi source to apply changes without needing the laptop. Pass `--check --diff` for dry-run, `--tags <role>` for a narrow re-run. |
 | **`devbox-doctor`** | Read-only health check for the box (binaries on PATH, Tailscale + SSH, docker, agent-layer symlinks, repo cleanliness, free disk + memory). Run after a `devbox-reprov` to smoke-test, or any time things feel off. Exit code = number of failures. |
+| **`bin/devbox-tf`** | Terraform for the VPS itself (`terraform/devbox/` — server, stable primary IP, firewall). **Laptop-only** (lane-2 creds live there; the box can't rebuild itself) — on the box, limit yourself to editing `.tf` files + `mise run tf:check`. Runbooks: [`docs/terraform.md`](../docs/terraform.md). |
 | **ripgrep** (`rg`), **fd**, **jq** | Search and JSON parsing. Prefer over `grep -r` / `find` / `python -m json.tool`. |
 | **process-compose** | Per-project dev-server stacks (API, Metro, infra) — on-demand, restart-fresh, run via `/serve` on a `pc-<project>.sock` UDS. Also fine for headless backing services (Postgres, Redis, workers). |
 | **ntfy** | Push notifications to phone (installed dormant — `curl -d "msg" ntfy.sh/$NTFY_TOPIC` once a topic is wired). |
@@ -218,6 +219,7 @@ Per-repo specifics (architecture layers, naming, file-size limits) live in that 
 | Merge + clean up | `wt merge` |
 | Clone + set up a new repo | use the `clone-repo` skill — clones from `github.com/fum4/<repo>` by default, proposes `devbox-scaffold` args, waits for user confirmation |
 | Apply devbox changes (role/chezmoi/skill/AGENTS.md edits) | `devbox-reprov` (or `devbox-reprov --check --diff` for a dry-run; `--tags <role>` for one role) |
+| Change the VPS itself (server type, firewall, IP) | edit `terraform/devbox/*.tf` + `mise run tf:check`; apply happens on the laptop via `bin/devbox-tf` ([`docs/terraform.md`](../docs/terraform.md)) |
 | Health-check the box | `devbox-doctor` |
 | See active sessions + worktrees | `/sessions` skill (or the `claude-sessions` helper for raw facts) |
 | List available skills | `/help` skill |

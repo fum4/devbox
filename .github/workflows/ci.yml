@@ -46,5 +46,27 @@ jobs:
         run: |
           shellcheck \
             bin/doctor \
+            bin/devbox-tf \
             chezmoi/dot_bashrc \
             chezmoi/dot_local/bin/executable_*
+
+  terraform:
+    name: Terraform fmt + validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          # Keep in step with the mise pin in .mise.toml [tools].
+          terraform_version: '1.15.6'
+
+      - name: terraform fmt -check
+        run: terraform -chdir=terraform/devbox fmt -check -recursive
+
+      - name: terraform validate
+        # -backend=false: no R2 creds in CI — validation only needs providers,
+        # resolved from the committed .terraform.lock.hcl.
+        run: |
+          terraform -chdir=terraform/devbox init -backend=false -input=false
+          terraform -chdir=terraform/devbox validate

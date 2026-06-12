@@ -40,17 +40,21 @@ devbox/
 │       ├── executable_claude-spawn      open a new Claude session in a Zellij tab (backs /new-*-session)
 │       └── executable_claude-park       park (record resume id + close tab) a session (backs /prune)
 ├── bin/                 laptop-side utility scripts — see bin/README.md
-│   └── doctor           verify the laptop is provisioning-ready
+│   ├── doctor           verify the laptop is provisioning-ready
+│   └── devbox-tf        terraform wrapper for terraform/devbox (loads R2 state creds)
+├── terraform/
+│   └── devbox/          the VPS itself as code — server, stable primary IP, firewall (docs/terraform.md)
 ├── docs/                end-to-end setup + recovery guides — see docs/README.md
 │   ├── laptop.md        fresh mac bootstrap (brew, age, ssh keys, clone)
-│   ├── hetzner.md       account, payment, project, SSH key upload, server create/destroy
+│   ├── hetzner.md       account, payment, project, API token (the parts that stay manual)
+│   ├── terraform.md     the box as code — bootstrap, import, rebuild, state in R2
 │   ├── tailscale.md     account, MagicDNS, OAuth client (zero-touch provisioning)
 │   ├── github.md        age-encrypted GitHub identity (SSH key + PAT)
 │   ├── mobile.md        phone-side apps (Tailscale, Claude, Expo Go)
 │   ├── provisioning.md       the provisioning runbook (every fresh VPS)
 │   └── recovery.md      incident response — when something breaks
 ├── repos.txt            repos cloned on every fresh provision (kost, devbox, …)
-└── .github/workflows/   CI — yamllint + ansible syntax check + shellcheck
+└── .github/workflows/   CI — yamllint + ansible syntax check + shellcheck + terraform fmt/validate
 ```
 
 Each subdirectory has its own README. **Read top to bottom**: start here, then `docs/README.md` (setup + recovery), `ansible/README.md` (provisioning internals), `chezmoi/README.md` (dotfiles), and `agents/README.md` (agent instructions + skills).
