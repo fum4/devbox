@@ -62,7 +62,11 @@ The devbox, its docs, and these agent rules are never "done." Whenever you spot 
 
 ### Postponed work goes in the repo's `TODO.md`
 
-When you decide something is left to do and **postpone it** — a follow-up, a deferred cleanup, a step that needs the user / the laptop / a paid signup, anything you're consciously not finishing now — record it in the **root `TODO.md` of the repo it belongs to** (create the file if absent). Don't let postponed work live only in chat, a commit message, or your own memory — those don't survive the session. One entry per item with enough context to pick it up cold: what, why deferred, and the first concrete step. Scope it to the right repo (kost work → `kost/TODO.md`, devbox work → `devbox/TODO.md`). This is the durable backlog; keep it honest — check items off or delete them when done.
+A repo's root `TODO.md` is the **owner's attention queue** — the list of things we consciously did *not* tackle now and that **need the owner to come back to** (a decision, a paid signup, a manual step, a deferred follow-up). Its single purpose is *don't let the owner forget*: they read it to see what's waiting on them, and they want to clear it ASAP.
+
+When you postpone something, record it in the root `TODO.md` of the repo it belongs to (create the file if absent) — don't let it live only in chat, a commit message, or your own memory; those don't survive the session. Scope it to the right repo (kost work → `kost/TODO.md`, devbox work → `devbox/TODO.md`).
+
+**Keep entries short and owner-facing**: what's waiting, why it was deferred, and the first concrete step — a few lines each, not pages. `TODO.md` is **not** a planning document: don't dump implementation plans, design analyses, or build phases there (those belong in the conversation, a handoff doc, or a design doc under `docs/`). Keep it honest — check items off or delete them when done; a stale `TODO.md` defeats its purpose.
 
 ## Tools
 
