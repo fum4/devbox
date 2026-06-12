@@ -32,7 +32,9 @@ wt — worktree + PR + merge helper for the devbox.
 USAGE
   wt new <task>           Branch a worktree from origin/<default> into ../<repo>-<task>
   wt pr [gh-args…]        Rebase + force-push-with-lease + gh pr create
-  wt merge [strategy]     Merge PR (default --squash, --delete-branch) + clean up worktree
+  wt merge [strategy]     Merge PR (default --squash) + delete branches + clean up worktree.
+                          Also works from a main checkout sitting on the feature branch
+                          (merges, then returns the checkout to <default>).
   wt rm <task> [--force]  Remove a worktree. Refuses unless PR is MERGED (or --force).
   wt help                 Show this help.
 
@@ -96,12 +98,19 @@ cmd_merge() {
     is_in_repo || die "not inside a git repo"
     local strategy="${1:---squash}"
 
-    local main current default branch
+    local main current default branch in_main=0
     main=$(repo_main_worktree)
     current=$(git rev-parse --show-toplevel)
-    [[ "$current" == "$main" ]] && die "run 'wt merge' from inside a worktree, not main"
-
+    default=$(repo_default_branch)
     branch=$(git symbolic-ref --short HEAD)
+
+    if [[ "$current" == "$main" ]]; then
+        # Feature branch checked out directly in the main checkout (no worktree).
+        # Supported: merge the PR, then return the checkout to <default>.
+        [[ "$branch" == "$default" ]] \
+            && die "main checkout is on $default — nothing to merge (run from a worktree, or check out the feature branch first)"
+        in_main=1
+    fi
 
     local pr state
     pr=$(gh pr view --json number --jq .number 2>/dev/null) \
@@ -111,19 +120,32 @@ cmd_merge() {
     case "$state" in
         MERGED) echo "PR #$pr already merged. Cleaning up." ;;
         CLOSED) die "PR #$pr is closed (not merged). Use 'wt rm <task> --force' to discard." ;;
-        OPEN)   gh pr merge "$pr" "$strategy" --delete-branch ;;
+        # Deliberately NOT gh's --delete-branch: run from a worktree it tries to
+        # check out <default> locally, which fatals ('main is already used by
+        # worktree …') and aborts before any cleanup. The remote branch is
+        # deleted explicitly below instead.
+        OPEN)   gh pr merge "$pr" "$strategy" ;;
         *)      die "unexpected PR state: $state" ;;
     esac
 
     cd "$main"
-    default=$(repo_default_branch)
     git fetch --quiet origin
+    if [[ "$in_main" -eq 1 ]]; then
+        git checkout --quiet "$default"
+    fi
     if [[ "$(git symbolic-ref --short HEAD 2>/dev/null)" == "$default" ]]; then
         git pull --ff-only --quiet origin "$default"
     fi
-    git worktree remove "$current"
+    if [[ "$in_main" -eq 0 ]]; then
+        git worktree remove "$current"
+    fi
     git branch -D "$branch" 2>/dev/null || true
-    echo "Done: PR #$pr merged, worktree removed, branch $branch deleted."
+    git push --quiet origin --delete "$branch" 2>/dev/null || true  # may already be auto-deleted
+    if [[ "$in_main" -eq 1 ]]; then
+        echo "Done: PR #$pr merged, main checkout back on $default, branch $branch deleted."
+    else
+        echo "Done: PR #$pr merged, worktree removed, branch $branch deleted."
+    fi
 }
 
 cmd_rm() {

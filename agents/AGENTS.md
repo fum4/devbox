@@ -92,7 +92,7 @@ Use the `wt` wrapper, not raw git/gh, for the worktree → PR → merge lifecycl
 |---|---|
 | `wt new <task>` | Branch a worktree from **`origin/<default>`** (fetches first). Creates `../<repo>-<task>` with branch `<task>`. |
 | `wt pr [gh-args…]` | Fetch + rebase on `origin/<default>` + `git push --force-with-lease` + `gh pr create`. Pauses on conflicts. |
-| `wt merge [strategy]` | Merge the current worktree's PR (default `--squash`, `--delete-branch`) + remove worktree + delete local branch + pull `<default>` forward. |
+| `wt merge [strategy]` | Merge the current branch's PR (default `--squash`) + delete remote & local branch + remove worktree + pull `<default>` forward. Also works from a main checkout sitting on the feature branch (merges, then returns the checkout to `<default>`). |
 | `wt rm <task> [--force]` | Remove a worktree. Refuses unless the PR is MERGED (or `--force`). |
 | `wt help` | Full reference. |
 
