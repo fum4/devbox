@@ -46,6 +46,7 @@ Not a docs flow — use the `clone-repo` skill on the devbox itself. Either tell
 | [`provisioning.md`](provisioning.md) | Every VPS provision | Fully configured VPS, agents driveable from phone |
 | [`mobile.md`](mobile.md) | New phone, or after reinstall | Tailscale + Claude + Expo Go ready |
 | [`sessions.md`](sessions.md) | Anyone hosting agent sessions or dev servers | How sessions (systemd+dtach) and dev servers (process-compose) are supervised; spawn / attach / restore / migrate |
+| [`skills.md`](skills.md) | Anyone adding/updating agent skills | Custom vs vendored skills, the easyskills manifest + pinning model, add/update/patch flows, security policy |
 | [`hermes.md`](hermes.md) | Anyone touching the orchestration layer | Evaluation of Hermes Agent as the orchestration brain: fit analysis, model strategy, migration plan, open decisions (status: not yet adopted) |
 | [`recovery.md`](recovery.md) | Incident response | Symptom → cause → fix matrix |
 

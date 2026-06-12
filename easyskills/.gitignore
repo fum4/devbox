@@ -1,0 +1,5 @@
+# easyskills global home (manifest is committed; the store is restored from pins
+# by `easyskills install` — see docs/skills.md)
+.skills/
+.easyskills.lock
+.skills.pristine/

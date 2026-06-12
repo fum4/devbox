@@ -36,6 +36,11 @@ if [ -x "$HOME/.local/bin/mise" ]; then
     eval "$("$HOME/.local/bin/mise" activate bash)"
 fi
 
+# easyskills global home — the vendored-skills manifest lives in the devbox
+# repo so its commit pins are declarative (see devbox docs/skills.md). Set
+# here so a bare `easyskills update` always hits the repo-backed home.
+export EASYSKILLS_HOME="$HOME/code/devbox/easyskills"
+
 # Optional per-machine extras (e.g., one-off env that doesn't belong in chezmoi).
 # `.bashrc.local` is intentionally external to this repo — shellcheck can't see
 # its contents from CI, which is fine.

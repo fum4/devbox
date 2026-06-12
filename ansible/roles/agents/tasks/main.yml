@@ -2,10 +2,14 @@
 # Deploy AGENTS.md + cross-agent skills (see ../../../agents/README.md).
 #
 # Strategy:
-#   1. symlink ~/.agents/{AGENTS.md,README.md,skills} → ~/code/devbox/agents/
+#   1. symlink ~/.agents/{AGENTS.md,README.md} → ~/code/devbox/agents/
 #      (so edits to the devbox checkout are live with no apply step)
-#   2. symlink ~/.claude/CLAUDE.md and ~/.codex/AGENTS.md → ~/.agents/AGENTS.md
-#   3. symlink ~/.claude/skills and ~/.codex/skills → ~/.agents/skills
+#   2. ~/.agents/skills is a REAL directory of per-skill symlinks:
+#      custom skills → ~/code/devbox/agents/skills/<name> (this role),
+#      vendored skills → the easyskills store (the `easyskills` role).
+#      One flat dir; provenance is where each link points. See docs/skills.md.
+#   3. symlink ~/.claude/CLAUDE.md and ~/.codex/AGENTS.md → ~/.agents/AGENTS.md
+#   4. symlink ~/.claude/skills and ~/.codex/skills → ~/.agents/skills
 #
 # Precondition: ~/code/devbox/ is checked out — the `repos` role (which runs
 # before this one per site.yml) handles that. The playbook also runs from
@@ -35,7 +39,53 @@
   loop:
     - AGENTS.md
     - README.md
-    - skills
+
+- name: Check what ~/.agents/skills currently is
+  stat:
+    path: "/home/{{ devbox_user }}/.agents/skills"
+  register: agents_skills_stat
+
+# Legacy layout: ~/.agents/skills was a symlink straight into the devbox repo.
+# It's now a real directory of per-skill symlinks (so vendored skills can sit
+# alongside without dirtying the repo) — drop the old link first.
+- name: Remove legacy ~/.agents/skills symlink
+  file:
+    path: "/home/{{ devbox_user }}/.agents/skills"
+    state: absent
+  when: agents_skills_stat.stat.islnk | default(false)
+
+- name: Ensure ~/.agents/skills is a real directory
+  file:
+    path: "/home/{{ devbox_user }}/.agents/skills"
+    state: directory
+    owner: "{{ devbox_user }}"
+    group: "{{ devbox_user }}"
+    mode: "0755"
+
+- name: Find custom skills in the devbox repo
+  find:
+    paths: "/home/{{ devbox_user }}/code/devbox/agents/skills"
+    file_type: directory
+    recurse: false
+  register: custom_skills
+
+- name: Symlink each custom skill into ~/.agents/skills
+  file:
+    src: "{{ item.path }}"
+    dest: "/home/{{ devbox_user }}/.agents/skills/{{ item.path | basename }}"
+    state: link
+    force: true
+    owner: "{{ devbox_user }}"
+    group: "{{ devbox_user }}"
+  loop: "{{ custom_skills.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+
+# Covers custom skills deleted from the repo and vendored skills removed from
+# the manifest alike — a dangling link is never load-bearing.
+- name: Prune dangling skill symlinks
+  command: find "/home/{{ devbox_user }}/.agents/skills" -maxdepth 1 -xtype l -delete
+  changed_when: false
 
 - name: Symlink ~/.claude/CLAUDE.md → ~/.agents/AGENTS.md
   file:

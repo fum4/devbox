@@ -1,0 +1,51 @@
+# skills.toml — managed by easyskills.
+# Edit `url`, `version`, `include`, `exclude`. The `resolved` + `skills` fields are written by the tool.
+
+[[source]]
+url = "github:vercel-labs/skills"
+version = "latest"
+include = ["find-skills"]
+resolved = "be0dd25b4a8665894a56f45ef582cc02ca802c39"
+skills = ["find-skills"]
+
+[[source]]
+url = "github:anthropics/skills/skills/frontend-design"
+version = "latest"
+resolved = "57546260929473d4e0d1c1bb75297be2fdfa1949"
+skills = ["frontend-design"]
+
+[[source]]
+url = "github:mattpocock/skills"
+version = "latest"
+include = [
+    "tdd",
+    "grill-me",
+    "grill-with-docs",
+    "write-a-skill",
+    "handoff",
+    "zoom-out",
+    "improve-codebase-architecture",
+]
+resolved = "694fa30311e02c2639942308513555e61ee84a6f"
+skills = [
+    "grill-me",
+    "grill-with-docs",
+    "handoff",
+    "improve-codebase-architecture",
+    "tdd",
+    "write-a-skill",
+    "zoom-out",
+]
+
+[[source]]
+url = "github:vercel-labs/agent-skills"
+version = "latest"
+include = [
+    "vercel-react-best-practices",
+    "vercel-composition-patterns",
+]
+resolved = "f8a72b9603728bb92a217a879b7e62e43ad76c81"
+skills = [
+    "vercel-composition-patterns",
+    "vercel-react-best-practices",
+]

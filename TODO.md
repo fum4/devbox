@@ -43,3 +43,22 @@ needs input) instead of polling the app. Deferred 2026-06-12 — owner said "not
 ntfy.sh topic), deliver it as `NTFY_TOPIC` via the secrets flow
 (`docs/secrets.md`), then decide trigger points (Claude Code Stop hooks?
 process-compose lifecycle hooks?).
+
+## agent-browser: skill + binary, together
+
+**Why:** wanted hard for ad-hoc browser verification ("open the app and look")
+— complements per-repo Playwright e2e. Deferred 2026-06-12 because the skill
+drives the `agent-browser` CLI and the box has no global node (by design), so
+the binary needs a provisioning decision first.
+
+**First step:** decide the install path — likely a global mise config
+(`~/.config/mise/config.toml` via chezmoi, npm backend) or a dedicated ansible
+role; then `easyskills --global add github:vercel-labs/agent-browser` +
+security pass, per docs/skills.md.
+
+## Wave-2 vendored skills (re-evaluate after wave 1 earns its keep)
+
+`ui-ux-pro-max` (if frontend-design leaves a gap), `skill-creator`,
+`teach` (existence unverified). Rejected for now: `agentspace` (ships files to
+external cloud — see docs/skills.md security policy), `github-actions-docs`
+(no Actions minutes).

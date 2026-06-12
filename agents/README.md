@@ -91,6 +91,16 @@ The `description` is the most important field — both agents use it to decide w
 
 When to use a worktree is a judgment call, not a skill — see `AGENTS.md` → "When to use a worktree" (quick fix → default branch; feature-sized → propose a worktree first).
 
+## Vendored (third-party) skills
+
+The table above is only our **custom** skills. Third-party skills from the open
+ecosystem (skills.sh / GitHub) are managed by **easyskills**, pinned in
+[`../easyskills/skills.toml`](../easyskills/skills.toml), and linked into the
+same `~/.agents/skills/` directory at provision time. `easyskills --global
+list` shows what's installed; the add/update/patch flows and the security
+policy (read every new SKILL.md before committing its pin) live in
+[`../docs/skills.md`](../docs/skills.md).
+
 ## Adding a new skill
 
 1. `mkdir -p agents/skills/<name>`

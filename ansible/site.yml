@@ -74,5 +74,11 @@
     - role: agents
       tags: [agents, dotfiles]
 
+    # Builds the easyskills binary from ~/code/easyskills (cloned by `repos`)
+    # and installs the vendored skill set pinned in ../easyskills/skills.toml
+    # into ~/.agents/skills (made a real dir by `agents`) — AFTER both.
+    - role: easyskills
+      tags: [easyskills, tools]
+
     - role: dotfiles            # chezmoi + apply ../chezmoi
       tags: [dotfiles]
