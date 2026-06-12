@@ -32,3 +32,14 @@ job, the same laptop-only way it delivers its own identity. See `docs/secrets.md
 
 > Depends on kost first generating its own age key — see kost `TODO.md`. The two
 > are a pair: kost owns its encrypted secrets; the devbox delivers the key.
+
+## Wire up ntfy push notifications
+
+**Why:** ntfy is installed but dormant. Phone-driven sessions would benefit from
+push when a long-running task finishes (build done, /serve stack crashed, agent
+needs input) instead of polling the app. Deferred 2026-06-12 — owner said "not yet".
+
+**First step:** pick/provision a private topic (self-hosted or unguessable
+ntfy.sh topic), deliver it as `NTFY_TOPIC` via the secrets flow
+(`docs/secrets.md`), then decide trigger points (Claude Code Stop hooks?
+process-compose lifecycle hooks?).
