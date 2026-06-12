@@ -37,10 +37,21 @@ HCLOUD_TOKEN="$(age -d -i "$AGE_KEY" "$SECRETS/hetzner-token.age")"
 export HCLOUD_TOKEN
 
 # r2-devbox-state.age decrypts to env-file lines: AWS_ACCESS_KEY_ID=… / AWS_SECRET_ACCESS_KEY=…
-set -a
-# shellcheck source=/dev/null
-. <(age -d -i "$AGE_KEY" "$SECRETS/r2-devbox-state.age")
-set +a
+# Parse with command substitution + explicit export (the same reliable pattern
+# as HCLOUD_TOKEN above). `set -a; . <(…)` did NOT export here — depending on
+# the shell/bash version it sources into a context where allexport doesn't take,
+# leaving the backend with no creds.
+_r2="$(age -d -i "$AGE_KEY" "$SECRETS/r2-devbox-state.age")"
+AWS_ACCESS_KEY_ID="$(printf '%s\n' "$_r2" | sed -n 's/^AWS_ACCESS_KEY_ID=//p')"
+AWS_SECRET_ACCESS_KEY="$(printf '%s\n' "$_r2" | sed -n 's/^AWS_SECRET_ACCESS_KEY=//p')"
+export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
+unset _r2
+
+if [[ -z "$AWS_ACCESS_KEY_ID" || -z "$AWS_SECRET_ACCESS_KEY" ]]; then
+  echo "ERROR: r2-devbox-state.age didn't yield AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY." >&2
+  echo "       Re-encrypt it with both lines (docs/terraform.md → bootstrap step 3)." >&2
+  exit 2
+fi
 
 # Use ONLY the R2 creds injected above. Without this, the S3 backend's AWS
 # credential chain can pick up a personal ~/.aws/credentials / ~/.aws/config
