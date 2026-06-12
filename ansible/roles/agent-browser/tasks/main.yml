@@ -1,0 +1,42 @@
+---
+# agent-browser — Vercel's Rust CLI for agent-driven browser automation
+# (snapshot→refs over CDP, client/daemon model). The devbox's tool for ad-hoc
+# "open the app and look" verification; per-repo Playwright e2e suites stay
+# separate. Skill side is vendored via easyskills (see docs/skills.md).
+#
+# Single static binary from a pinned GitHub release (version in
+# defaults/main.yml), stored versioned + symlinked so bumps are atomic.
+# Chrome comes from `agent-browser install` (Chrome for Testing →
+# ~/.cache/agent-browser/browsers); system libs come from the playwright-deps
+# role, which runs earlier in site.yml.
+
+- name: Ensure versioned install dir exists
+  file:
+    path: "/home/{{ devbox_user }}/.local/share/agent-browser"
+    state: directory
+    owner: "{{ devbox_user }}"
+    group: "{{ devbox_user }}"
+    mode: "0755"
+
+- name: Download agent-browser {{ agent_browser_version }}
+  get_url:
+    url: "https://github.com/vercel-labs/agent-browser/releases/download/{{ agent_browser_version }}/agent-browser-linux-x64"
+    dest: "/home/{{ devbox_user }}/.local/share/agent-browser/agent-browser-{{ agent_browser_version }}"
+    owner: "{{ devbox_user }}"
+    group: "{{ devbox_user }}"
+    mode: "0755"
+
+- name: Symlink ~/.local/bin/agent-browser → pinned version
+  file:
+    src: "/home/{{ devbox_user }}/.local/share/agent-browser/agent-browser-{{ agent_browser_version }}"
+    dest: "/home/{{ devbox_user }}/.local/bin/agent-browser"
+    state: link
+    force: true
+    owner: "{{ devbox_user }}"
+    group: "{{ devbox_user }}"
+
+- name: Download Chrome for Testing (agent-browser install)
+  command: "/home/{{ devbox_user }}/.local/bin/agent-browser install"
+  args:
+    creates: "/home/{{ devbox_user }}/.cache/agent-browser/browsers"
+  become_user: "{{ devbox_user }}"

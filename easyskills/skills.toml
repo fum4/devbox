@@ -15,29 +15,6 @@ resolved = "57546260929473d4e0d1c1bb75297be2fdfa1949"
 skills = ["frontend-design"]
 
 [[source]]
-url = "github:mattpocock/skills"
-version = "latest"
-include = [
-    "tdd",
-    "grill-me",
-    "grill-with-docs",
-    "write-a-skill",
-    "handoff",
-    "zoom-out",
-    "improve-codebase-architecture",
-]
-resolved = "694fa30311e02c2639942308513555e61ee84a6f"
-skills = [
-    "grill-me",
-    "grill-with-docs",
-    "handoff",
-    "improve-codebase-architecture",
-    "tdd",
-    "write-a-skill",
-    "zoom-out",
-]
-
-[[source]]
 url = "github:vercel-labs/agent-skills"
 version = "latest"
 include = [
@@ -49,3 +26,46 @@ skills = [
     "vercel-composition-patterns",
     "vercel-react-best-practices",
 ]
+
+[[source]]
+url = "github:mattpocock/skills"
+version = "latest"
+include = [
+    "tdd",
+    "grill-me",
+    "grill-with-docs",
+    "write-a-skill",
+    "handoff",
+    "zoom-out",
+    "improve-codebase-architecture",
+    "teach",
+]
+resolved = "694fa30311e02c2639942308513555e61ee84a6f"
+skills = [
+    "grill-me",
+    "grill-with-docs",
+    "handoff",
+    "improve-codebase-architecture",
+    "tdd",
+    "teach",
+    "write-a-skill",
+    "zoom-out",
+]
+
+[[source]]
+url = "github:nextlevelbuilder/ui-ux-pro-max-skill/.claude/skills/ui-ux-pro-max"
+version = "latest"
+resolved = "b7e3af80f6e331f6fb456667b82b12cade7c9d35"
+skills = ["ui-ux-pro-max"]
+
+[[source]]
+url = "github:anthropics/skills/skills/skill-creator"
+version = "latest"
+resolved = "57546260929473d4e0d1c1bb75297be2fdfa1949"
+skills = ["skill-creator"]
+
+[[source]]
+url = "github:vercel-labs/agent-browser/skills/agent-browser"
+version = "latest"
+resolved = "5185339ca3fdab9848e11b8ec676eecfdec3733f"
+skills = ["agent-browser"]

@@ -49,6 +49,10 @@
     - role: playwright-deps     # apt libs for Chromium headless-shell (kost mobile-preview, future e2e)
       tags: [playwright-deps, tools]
 
+    # Needs playwright-deps' chromium libs — keep after it.
+    - role: agent-browser       # Rust CLI for ad-hoc agent-driven browser checks (snapshot→refs)
+      tags: [agent-browser, tools]
+
     - role: ntfy                # ntfy CLI (dormant; no integrations yet)
       tags: [ntfy, tools]
 
