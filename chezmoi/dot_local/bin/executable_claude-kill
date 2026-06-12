@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+# claude-kill <session-name> [--rm-worktree] [--force] — permanently remove an
+# agent session. The destructive sibling of claude-park.
+#
+# What it does, in order:
+#   1. records the kill to ~/.claude/killed-sessions.log first (conversation id
+#      + cwd, so a manual `claude-spawn --resume <id>` can still resurrect it)
+#   2. stops claude@<name>.service
+#   3. forgets the session: removes ~/.config/claude-sessions/<name>.env (+ .prompt),
+#      so it no longer appears in claude-restore
+#   4. with --rm-worktree: removes the session's cwd IF AND ONLY IF it is a
+#      *linked* git worktree (wt-style), plus its local branch. A repo's MAIN
+#      checkout is never removed — killing a session there only stops the agent.
+#      --force passes through to `git worktree remove --force` (needed when the
+#      worktree has uncommitted changes).
+#
+# Self-kill safe: when invoked from inside the very session being killed (the
+# /kill skill does this), it re-execs itself into a transient systemd unit so
+# the cleanup survives the caller's own death.
+#
+# The transcript in ~/.claude/projects/ is never deleted — history stays.
+# Judgment (WIP checks, PR state, user confirmation) lives in the /kill skill;
+# this script is the deterministic core. See docs/sessions.md.
+
+set -euo pipefail
+
+KILL_LOG="$HOME/.claude/killed-sessions.log"
+CONF_DIR="$HOME/.config/claude-sessions"
+
+name=""; rm_worktree=0; force=0; reexeced=0
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --rm-worktree) rm_worktree=1; shift ;;
+        --force)       force=1; shift ;;
+        --reexeced)    reexeced=1; shift ;;   # internal: already in a transient unit
+        -*)            echo "claude-kill: unknown flag '$1'" >&2; exit 2 ;;
+        *)             name="$1"; shift ;;
+    esac
+done
+[[ -n "$name" ]] || { echo "usage: claude-kill <session-name> [--rm-worktree] [--force]" >&2; exit 2; }
+
+env_file="$CONF_DIR/$name.env"
+[[ -f "$env_file" ]] || { echo "claude-kill: no known session '$name' ($env_file missing)" >&2; exit 1; }
+
+# Self-kill: if we're running inside the very unit we're about to stop, hand the
+# job to a transient unit that survives us, and return immediately. Without this
+# the `systemctl stop` below would kill this script mid-cleanup.
+if [[ "$reexeced" -eq 0 ]] && grep -q "claude@${name}\.service" /proc/self/cgroup 2>/dev/null; then
+    args=(--reexeced)
+    [[ "$rm_worktree" -eq 1 ]] && args+=(--rm-worktree)
+    [[ "$force" -eq 1 ]] && args+=(--force)
+    systemd-run --user --collect --quiet "$(readlink -f "$0")" "$name" "${args[@]}"
+    echo "claude-kill: killing own session '$name' — cleanup handed to a transient unit."
+    echo "  this process is about to be stopped; see ~/.claude/killed-sessions.log afterwards"
+    exit 0
+fi
+
+sid="$(sed -n 's/^SESSION_ID=//p' "$env_file")"
+cwd="$(sed -n 's/^CWD=//p' "$env_file")"
+
+# Record BEFORE acting (mirrors claude-park) — the log is how you resurrect.
+printf '%s\tname=%s\tcwd=%s\tconv=%s\tresurrect=claude-spawn --name %s --cwd %s --resume %s\n' \
+    "$(date -Is)" "$name" "$cwd" "${sid:-?}" "$name" "$cwd" "${sid:-?}" >> "$KILL_LOG"
+
+systemctl --user stop "claude@${name}.service" 2>/dev/null || true
+systemctl --user reset-failed "claude@${name}.service" 2>/dev/null || true
+rm -f "$env_file" "$CONF_DIR/$name.prompt"
+echo "Killed '$name' → $KILL_LOG"
+echo "  stopped claude@${name}; session forgotten (transcript kept in ~/.claude/projects)"
+
+if [[ "$rm_worktree" -eq 1 && -d "$cwd" ]]; then
+    git_dir="$(git -C "$cwd" rev-parse --git-dir 2>/dev/null || true)"
+    common_dir="$(git -C "$cwd" rev-parse --git-common-dir 2>/dev/null || true)"
+    if [[ -z "$git_dir" || "$git_dir" == "$common_dir" ]]; then
+        # Main checkout (or not a repo at all) — never remove. Hard guard.
+        echo "claude-kill: cwd '$cwd' is not a linked worktree — leaving it untouched" >&2
+    else
+        branch="$(git -C "$cwd" symbolic-ref --short HEAD 2>/dev/null || true)"
+        main_root="$(dirname "$(readlink -f "$common_dir")")"   # parent of the main checkout's .git
+        rm_args=(); [[ "$force" -eq 1 ]] && rm_args+=(--force)
+        if git -C "$main_root" worktree remove ${rm_args[@]+"${rm_args[@]}"} "$cwd"; then
+            if [[ -n "$branch" ]]; then
+                git -C "$main_root" branch -D "$branch" 2>/dev/null || true
+            fi
+            echo "  removed worktree $cwd (local branch ${branch:-?} deleted)"
+        else
+            echo "claude-kill: worktree removal failed (uncommitted changes? rerun with --force)" >&2
+            exit 1
+        fi
+    fi
+fi

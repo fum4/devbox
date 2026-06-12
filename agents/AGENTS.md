@@ -190,7 +190,8 @@ Per-repo specifics (architecture layers, naming, file-size limits) live in that 
 | Detach from a dashboard | `Ctrl+O` then `d` (a dtach pane: `Ctrl+\`) |
 | Spawn an agent session | `claude-spawn --name <name> --cwd <dir>` |
 | Restore sessions after a reboot | `claude-restore` (list) · `claude-restore <name>` / `--all` |
-| Park (stop) a session, keep the conversation | `claude-park <name>` |
+| Park (stop) a session, keep the conversation | `claude-park <name>` (with WIP checks: the `/park` skill) |
+| Kill a session for good (+ its worktree) | `claude-kill <name> [--rm-worktree]` (with WIP checks: the `/kill` skill) |
 | List dashboards | `zellij ls` |
 | Run a task | `mise run <task>` (after `cd <repo>`) |
 | List tasks for current repo | `mise tasks` |
