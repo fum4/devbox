@@ -94,11 +94,24 @@ Use the `wt` wrapper, not raw git/gh, for the worktree → PR → merge lifecycl
 | `wt pr [gh-args…]` | Fetch + rebase on `origin/<default>` + `git push --force-with-lease` + `gh pr create`. Pauses on conflicts. |
 | `wt merge [strategy]` | Merge the current branch's PR (default `--squash`) + delete remote & local branch + remove worktree + pull `<default>` forward. Also works from a main checkout sitting on the feature branch (merges, then returns the checkout to `<default>`). |
 | `wt rm <task> [--force]` | Remove a worktree. Refuses unless the PR is MERGED (or `--force`). |
+| `wt wip [path]` | One-shot WIP report for a checkout: branch, uncommitted/stashes, unpushed, PR state, gitignored env files. Used by `/park`, `/kill`, `/prune`. |
+| `wt env [task]` | Mirror gitignored env files from the main checkout into a worktree (never overwrites). Runs automatically at the end of `wt new`; re-run by hand when env files change. |
 | `wt help` | Full reference. |
 
 `wt` is the deterministic core; the judgment layer lives in skills. List worktrees with `git worktree list`. To clean up stale worktrees use the session-aware **`/prune`** skill (parks live sessions, checks for uncommitted work). To spawn a worktree-backed session use **`/new-work-session`**. Both build on the commands above rather than duplicating the git plumbing.
 
 **Always** use `wt new` instead of `git worktree add`. **Always** use `wt pr` / `wt merge` instead of `gh pr create` / `gh pr merge`. They handle sync, rebase, and cleanup that's easy to forget manually.
+
+### When to use a worktree — judge the size, propose first
+
+No decision tree; one judgment call: **is this big enough to be a feature?**
+
+- Quick bug fix, doc tweak, config bump, small chore → do it directly on the default branch (shared-branch discipline below applies).
+- A feature, a refactor with real blast radius, anything multi-commit or that will run alongside other work → worktree via `wt new`.
+- **Propose before creating.** Say "this looks worktree-sized — branch a worktree?" and let the user confirm; they may prefer quick-and-dirty on the default branch. Don't silently `wt new`.
+- Two sessions about to touch the same repo at once → worktree, always — that's the one non-negotiable (merge headaches otherwise).
+
+If a worktree's dev contract fails on boot (zod "Invalid env", missing `DATABASE_URL`), it's almost always env files — `wt env` mirrors them (and `wt new` already does it); see "Worktree environment files" below.
 
 ### Shared-branch work and commit discipline
 
@@ -145,13 +158,12 @@ If you find yourself wanting to `git pull` on a default branch manually, you don
 
 Gitignored env files (`.env`, `.env.local`, `apps/*/.env*`, …) **do not follow** worktree creation — they live in whichever checkout originally created them. A new worktree that needs them will look fine to git and fail opaquely the first time you run the dev contract.
 
-When you start work in a worktree, before running tasks:
+**`wt env` does the mechanical part**: it mirrors every gitignored `.env*` file from the main checkout into the worktree (same relative path, never overwriting), and runs automatically at the end of `wt new`. Re-run it by hand (`wt env` from inside the worktree, or `wt env <task>` from main) when env files were added after the worktree was created.
 
-1. **Find them in the source checkout** —
-   `git -C ~/code/<repo> ls-files --others --ignored --exclude-standard | grep -E '(^|/)\.env'`.
-2. **Mirror anything that exists** into the same path in the new worktree. Without this the dev contract throws at boot (e.g. zod "Invalid env" on Expo, "DATABASE_URL is required" on drizzle-kit) or runs but talks to the wrong host.
-3. **Sanity-check host-pointing values** (`*_BASE_URL`, anything with an IP or `localhost`). If the env was authored on a laptop and you're now on the devbox, swap LAN IPs for the devbox's Tailscale MagicDNS FQDN so phones / other tailnet peers can reach the dev server.
-4. **When you discover a new env file pattern that isn't yet listed** in that repo's `CLAUDE.md` / `AGENTS.md`, **add the concrete list there** (source path → destination path, plus any host-substitution notes). Per-repo facts belong in per-repo agent files; this section documents only the universal principle. The next session shouldn't have to re-derive it.
+What stays on you (judgment, not mechanics):
+
+1. **Sanity-check host-pointing values** (`*_BASE_URL`, anything with an IP or `localhost`) — `wt env` flags files containing them but won't rewrite. If the env was authored on a laptop and you're now on the devbox, swap LAN IPs for the devbox's Tailscale MagicDNS FQDN so phones / other tailnet peers can reach the dev server.
+2. **When you discover a new env file pattern that isn't yet listed** in that repo's `CLAUDE.md` / `AGENTS.md`, **add the concrete list there** (source path → destination path, plus any host-substitution notes). Per-repo facts belong in per-repo agent files; this section documents only the universal principle. The next session shouldn't have to re-derive it. (Note: `wt env` collapses fully-ignored *directories* — an env file living inside one, e.g. `config/secrets/.env`, won't be auto-mirrored; that's exactly the kind of repo quirk to document per-repo.)
 
 Same applies in reverse for new env vars added during a session — if you add one to the worktree's env file, also add it to `.env.example` so other checkouts pick it up.
 
@@ -204,4 +216,4 @@ Per-repo specifics (architecture layers, naming, file-size limits) live in that 
 | See active sessions + worktrees | `/sessions` skill (or the `claude-sessions` helper for raw facts) |
 | List available skills | `/help` skill |
 
-For when to use a worktree (and when not), the `parallel-work` skill in `~/.agents/skills/parallel-work/SKILL.md` has the full decision tree. For onboarding a new repo onto the devbox, the `clone-repo` skill walks through clone → inspect → confirm → scaffold.
+For onboarding a new repo onto the devbox, the `clone-repo` skill walks through clone → inspect → confirm → scaffold.

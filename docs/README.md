@@ -53,7 +53,7 @@ Not a docs flow — use the `clone-repo` skill on the devbox itself. Either tell
 
 - **High-level design** (why we picked this stack): in commit history + the source-level READMEs (root, `ansible/`, `agents/`, `chezmoi/`).
 - **Per-project setup** (how to run kost specifically, etc.): in each project's own repo.
-- **Skill definitions** (`parallel-work`, `clone-repo`): in [`../agents/skills/`](../agents/skills/), loaded on-demand by Claude / Codex.
+- **Skill definitions** (`clone-repo`, `prune`, `park`, …): in [`../agents/skills/`](../agents/skills/), loaded on-demand by Claude / Codex.
 - **Ansible role internals**: each role's `tasks/main.yml` is its own documentation.
 
 ## Conventions in these docs

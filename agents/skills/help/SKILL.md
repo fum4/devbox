@@ -18,12 +18,14 @@ Give the user a clean, scannable list of every skill they can invoke: `name` —
 ```
 Available skills — invoke with /<name>:
 
-  /sessions          — list active sessions + worktrees, with a gist of each
-  /prune             — find stale worktrees/sessions and clean them up (with your OK)
+  /sessions          — full inventory: sessions (with gists), worktrees, dev stacks
+  /prune             — clean-up review board: everything + suggested actions, you decide
+  /park              — stop a session, keep the conversation (reversible)
+  /kill              — destroy a session + its worktree, deliberately
   /new-chat-session  — open a fresh general-purpose session
   /new-work-session  — open a session that clarifies a task, then works in its own worktree
-  /clone-repo        — clone + set up a new GitHub repo on the devbox
-  /parallel-work     — (auto) guidance for branching work into a worktree
+  /new-repo          — create a brand-new GitHub repo + dev contract + session
+  /clone-repo        — clone + set up an existing GitHub repo on the devbox
   /serve             — start/stop/restart the dev servers for the current worktree
   /help              — this list
 ```

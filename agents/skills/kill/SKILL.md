@@ -23,34 +23,26 @@ If the user only wants the session out of the way for now, that's `/park`.
    Name = matching filename minus `.env`. No match → unmanaged session: nothing
    to kill via systemd; say so and stop.
 
-2. **Classify the cwd.** Read `CWD=` from the env file and determine what it is:
-   ```bash
-   git -C "$cwd" rev-parse --git-dir --git-common-dir
-   ```
-   - Paths differ → **linked worktree**; removal is on the table.
-   - Paths equal (or not a repo) → **main checkout**; it is NEVER removed —
-     killing here only stops + forgets the session. Tell the user that's the
-     scope before they confirm.
+2. **Classify the cwd + WIP sweep — one call.** Read `CWD=` from the env file
+   and run `wt wip <cwd>`. It reports:
+   - `checkout: … (linked-worktree | main-checkout)` — a **main checkout is
+     NEVER removed**; killing there only stops + forgets the session. Tell the
+     user that's the scope before they confirm.
+   - uncommitted changes and stashes — **lost** with the worktree on kill
+   - unpushed commits / "no upstream" — commits only reachable here are **lost**
+   - PR state — OPEN (work in flight), none (never PR'd), CLOSED (abandoned?),
+     MERGED (safe)
+   - gitignored env files — worth one line; they don't follow worktrees
 
-3. **WIP sweep — stricter than /park, because this destroys.** In the cwd check:
-   - uncommitted changes (`git status --porcelain`) — these are **lost** on kill
-   - stashes (`git stash list`) — also lost with the worktree
-   - unpushed commits (`git log @{u}..HEAD --oneline`, or "branch never pushed" —
-     commits only reachable here are **lost**)
-   - PR state (`gh pr list --head <branch> --state all --json state,number`) —
-     OPEN (work in flight), NONE (never PR'd), CLOSED (abandoned?), MERGED (safe)
-   - gitignored env files (`git ls-files --others --ignored --exclude-standard |
-     grep -E '(^|/)\.env'`) — worth one line; they don't follow worktrees
-
-4. **Confirm — always, and twice when it bites.** Killing is destructive, so
+3. **Confirm — always, and twice when it bites.** Killing is destructive, so
    always confirm once, spelling out exactly what goes (session forgotten,
    worktree path removed, branch deleted) and what stays (transcript, remote
-   branch, merged PR). If step 3 surfaced anything (uncommitted work, unpushed
+   branch, merged PR). If step 2 surfaced anything (uncommitted work, unpushed
    commits, a non-MERGED PR), present each finding and require a second,
    explicit confirmation that acknowledges the loss — "yes, discard the 3
    uncommitted files" — not just "yes".
 
-5. **Kill.** Run:
+4. **Kill.** Run:
    ```bash
    claude-kill <name> --rm-worktree           # clean worktree
    claude-kill <name> --rm-worktree --force   # only when the user confirmed discarding uncommitted work

@@ -25,7 +25,7 @@ devbox/
 ├── agents/              AGENTS.md + skills + Claude/Codex runtime config — see agents/README.md
 │   ├── AGENTS.md        always-loaded user instructions for Claude Code + Codex
 │   ├── claude/          Claude Code runtime config (settings.json, …)
-│   └── skills/          on-demand capabilities (parallel-work, clone-repo, …)
+│   └── skills/          on-demand capabilities (clone-repo, prune, park, kill, …)
 ├── chezmoi/             user-level dotfiles — see chezmoi/README.md
 │   ├── dot_bashrc
 │   ├── dot_claude/symlink_settings.json   symlinks ~/.claude/settings.json into agents/claude/

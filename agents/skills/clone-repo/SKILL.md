@@ -193,7 +193,7 @@ git add zellij.kdl .mise.toml   # only the ones that actually changed
 git commit -m "chore: add mise + zellij workspace config"
 ```
 
-If this is your default branch and the user is OK pushing: `git push`. If this is a feature branch / fork: use `wt pr` per the [parallel-work skill](../parallel-work/SKILL.md).
+If this is your default branch and the user is OK pushing: `git push`. If this is a feature branch / fork: use `wt pr` (see AGENTS.md → "Branch / PR / merge workflow").
 
 ## 9. Offer to add the repo to the devbox repos list
 
