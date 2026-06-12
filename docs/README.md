@@ -8,15 +8,15 @@ Everything you need to set up the devbox from scratch — laptop, Hetzner, Tails
 
 1. [`laptop.md`](laptop.md) — Mac setup, install tools, SSH keys
 2. [`hetzner.md`](hetzner.md) — Hetzner Cloud account + project + the API token Terraform uses
-3. [`terraform.md`](terraform.md) — bootstrap the R2 state bucket + lane-2 creds; the box itself as code
-4. [`github.md`](github.md) — Generate the **age keypair** (`secrets.local`) + bootstrap the age-encrypted GitHub identity
-5. [`tailscale.md`](tailscale.md) — Tailscale tenant, MagicDNS, OAuth client (reuses the age recipient from step 4)
+3. [`github.md`](github.md) — Generate the **age keypair** (`secrets.local`) + bootstrap the age-encrypted GitHub identity
+4. [`terraform.md`](terraform.md) — encrypt the TF creds (needs the age keypair from step 3), bootstrap the R2 state bucket; the box itself as code
+5. [`tailscale.md`](tailscale.md) — Tailscale tenant, MagicDNS, OAuth client (reuses the age recipient from step 3)
 6. [`provisioning.md`](provisioning.md) — Provision the first VPS
 7. [`mobile.md`](mobile.md) — Phone-side apps (Tailscale, Claude, Expo Go)
 
-About 90 minutes start-to-finish if nothing snags. **Step 4 before step 5** — Tailscale's OAuth bootstrap encrypts a secret using the age recipient that github.md generates.
+About 90 minutes start-to-finish if nothing snags. **Step 3 first among the bootstraps** — both Terraform's creds (step 4) and Tailscale's OAuth secret (step 5) encrypt to the age recipient that github.md generates.
 
-For the cross-cutting "how do encrypted secrets work in this repo" reference, see [`secrets.md`](secrets.md). Steps 4 and 5 both use the pattern described there.
+For the cross-cutting "how do encrypted secrets work in this repo" reference, see [`secrets.md`](secrets.md). Steps 3–5 all use the pattern described there.
 
 ### Lost laptop, accounts and secrets still intact
 

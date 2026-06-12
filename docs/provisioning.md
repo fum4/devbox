@@ -19,7 +19,7 @@ Three contexts appear in this doc; every code block is labeled with one of them.
 All set-up done once. If any are missing, do them first:
 
 - Laptop set up per [laptop.md](laptop.md) (`secrets.local` restored, ansible/age/gh installed, SSH keys generated)
-- Hetzner account ready per [hetzner.md](hetzner.md) (project + API token), Terraform bootstrapped per [terraform.md](terraform.md) (R2 state bucket + lane-2 creds restored)
+- Hetzner account ready per [hetzner.md](hetzner.md) (project + API token), Terraform bootstrapped per [terraform.md](terraform.md) (R2 state bucket created, both creds age-encrypted in `ansible/secrets/`)
 - Tailscale account ready per [tailscale.md](tailscale.md), with the OAuth client bootstrapped (`ansible/secrets/tailscale-oauth.age` committed)
 - GitHub identity bootstrapped per [github.md](github.md) (`ansible/secrets/github-*.age` committed)
 

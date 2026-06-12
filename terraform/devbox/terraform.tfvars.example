@@ -1,9 +1,0 @@
-# Copy to terraform.tfvars (gitignored, chmod 600) and fill in. Only the secret
-# lives here; everything else has defaults in variables.tf.
-#
-# Lane-2 credential (docs/secrets.md → "The two lanes of secrets"): laptop-only,
-# gitignored, backed up in Bitwarden — NOT the age store.
-
-# Hetzner Cloud API token — Read & Write, created in the devbox project:
-# console.hetzner.cloud → project → Security → API tokens.
-hcloud_token = "REPLACE_ME"

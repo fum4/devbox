@@ -33,18 +33,20 @@ job, the same laptop-only way it delivers its own identity. See `docs/secrets.md
 > Depends on kost first generating its own age key — see kost `TODO.md`. The two
 > are a pair: kost owns its encrypted secrets; the devbox delivers the key.
 
-## Terraform-provision the devbox VPS — waiting on your manual Phase 0
+## Terraform-provision the devbox VPS — Phase 1 merged (PR #12); your Phase 0 + 2 remain
 
-Plan agreed in the `devbox-terraform` session (2026-06-12): `terraform/devbox/`
-adopts the *running* box via `import` (no rebuild), R2 state backend, stable
-primary IP, Hetzner Cloud Firewall. Before the build can start, **you** need to
-do the manual prerequisites (provider UIs + Bitwarden):
+`terraform/devbox/` is on main; it adopts the *running* box via `import` (no
+rebuild). What's left needs **you** (browser + laptop) — full runbook:
+`docs/terraform.md` → "One-time bootstrap":
 
-- [ ] Create R2 bucket **`devbox-backup`** (Cloudflare UI) + an access key scoped
-  to it → Bitwarden.
-- [ ] Create a Hetzner **R/W API token** in the devbox project → Bitwarden.
-- [ ] Then tell the `devbox-terraform` session to build (it holds the full plan;
-  work goes in a `wt new terraform-provisioning` worktree).
+- [ ] R2 bucket **`devbox-backup`** (EU) + an **Account API token** scoped to it
+  (Object R&W). Hetzner **R/W API token** in the devbox project.
+- [ ] On the laptop: **age-encrypt both** into `ansible/secrets/`
+  (`hetzner-token.age`, `r2-devbox-state.age`) — bootstrap step 3 has the exact
+  commands. No Bitwarden entries, no plaintext files (secrets.md hard rule).
+- [ ] `bin/devbox-tf init` → import the 3 live resources → `plan` clean → `apply`
+  (bootstrap step 4). Ping the `devbox-terraform` session if the plan shows
+  anything destructive.
 
 ## Wire up ntfy push notifications
 

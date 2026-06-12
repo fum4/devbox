@@ -1,13 +1,15 @@
-# Secrets — never commit (lane 2: gitignored + Bitwarden, see docs/secrets.md).
-terraform.tfvars
-*.auto.tfvars
-.r2-backend.env
-
 # State lives in R2 (backend.tf); any local copy (e.g. from a backend migration
 # or `terraform state pull`) is sensitive — never commit.
 *.tfstate
 *.tfstate.*
 .terraform.tfstate.lock.info
+
+# No cred files should ever exist here (creds are age-encrypted in
+# ansible/secrets/ and injected as env by bin/devbox-tf) — but belt-and-braces
+# in case one is created by hand or by habit:
+terraform.tfvars
+*.auto.tfvars
+.r2-backend.env
 
 # Provider plugins / working dir.
 .terraform/

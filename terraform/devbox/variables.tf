@@ -1,12 +1,7 @@
-# All inputs. The one secret is marked `sensitive` so Terraform redacts it in
-# plan output and logs. Defaults encode the decisions in docs/terraform.md, so a
-# normal apply only needs hcloud_token in terraform.tfvars.
-
-variable "hcloud_token" {
-  description = "Hetzner Cloud API token, Read & Write scope, in the devbox project."
-  type        = string
-  sensitive   = true
-}
+# All inputs. No secrets here — credentials arrive as environment variables,
+# decrypted in memory from the age store by bin/devbox-tf (see providers.tf and
+# docs/terraform.md). Defaults encode the decisions in docs/terraform.md, so a
+# normal apply needs no input at all.
 
 variable "server_name" {
   description = "Server name = hostname = SSH alias = Tailscale machine name. One name everywhere."

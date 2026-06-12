@@ -11,9 +11,10 @@ and every rebuild changed the IP, forcing edits to `~/.ssh/config`,
 > takes over after `apply`), [secrets.md](secrets.md) → "Global doctrine" (the
 > state + credential strategy this implements).
 
-> All commands run **on the laptop** — the lane-2 credentials live there
-> exclusively, and a dead box can't rebuild itself. Use the **`bin/devbox-tf`**
-> wrapper, which loads the R2 state creds and forwards to `terraform`.
+> All commands run **on the laptop** — decryption needs `secrets.local` (the
+> devbox age key, laptop-only), and a dead box can't rebuild itself. Use the
+> **`bin/devbox-tf`** wrapper, which decrypts the creds in memory and forwards
+> to `terraform`.
 
 ## The layer cake
 
@@ -36,41 +37,72 @@ hands over a reachable box; `provisioning.md` §3 takes it from there.
 | `hcloud_firewall.devbox` | Network-edge default-deny; one inbound rule (SSH/22). Tailscale needs no inbound rule (outbound-initiated, DERP fallback). The on-box ufw stays as the host-level layer. |
 | `hcloud_ssh_key.devbox` | Registers the laptop's `~/.ssh/devbox_vps.pub` so a fresh box accepts root SSH on first boot. |
 
-## Credentials (lane 2) and state
+## Credentials and state
 
-Two gitignored files in `terraform/devbox/`, both mode 0600, both backed up in
-**Bitwarden** (see [secrets.md](secrets.md) → "The two lanes of secrets" — these
-are *laptop-only TF creds*, not age-store material):
+**No cred files exist, anywhere.** Both Terraform credentials are age-encrypted
+in the repo's secret store — the same store as everything else ([secrets.md](secrets.md)
+→ "The two lanes of secrets", lane 2). `bin/devbox-tf` decrypts them **in
+memory** with `secrets.local` and injects them as env vars; plaintext never
+touches disk and never reaches the box:
 
-| File | Holds | Bitwarden entry |
+| File (committed) | Holds | Injected as |
 |---|---|---|
-| `terraform.tfvars` | Hetzner API token (R/W, devbox project) | *"devbox Hetzner API token"* |
-| `.r2-backend.env` | R2 access keys for the state bucket | *"devbox-backup R2 access keys"* |
+| `ansible/secrets/hetzner-token.age` | Hetzner API token (R/W, devbox project) | `HCLOUD_TOKEN` |
+| `ansible/secrets/r2-devbox-state.age` | R2 access keys for the state bucket (env-file lines) | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
+
+Bitwarden holds **only the age key** (plus provider account logins) — never the
+tokens themselves. That's the hard rule in [secrets.md](secrets.md); don't drift.
 
 **State** lives in Cloudflare R2: bucket `devbox-backup`, key
 `terraform/devbox.tfstate` (S3 backend — see `backend.tf`). The bucket is
 created **out-of-band** (bootstrap exception: it holds Terraform's own state),
-EU jurisdiction, same Cloudflare account as `tipso-backup`.
+EU jurisdiction, same Cloudflare account as `tipso-backup`. Every terraform
+operation reads state from R2 and writes it back atomically — there is nothing
+to sync or back up on a schedule; R2 *is* the single copy.
 
 ### Restoring on a new laptop
 
+Nothing Terraform-specific to restore: once `secrets.local` is back
+([secrets.md](secrets.md) → "Restoring on a new laptop") and the repo is cloned,
+the creds are already there — encrypted, in git.
+
 ```bash
-cd ~/_work/devbox/terraform/devbox
-cp terraform.tfvars.example terraform.tfvars && chmod 600 terraform.tfvars
-cp .r2-backend.env.example .r2-backend.env   && chmod 600 .r2-backend.env
-# fill both from Bitwarden, then:
-../../bin/devbox-tf init     # connects to R2 state
-../../bin/devbox-tf plan     # expect: No changes
+cd ~/_work/devbox
+bin/devbox-tf init     # connects to R2 state
+bin/devbox-tf plan     # expect: No changes
 ```
 
 ## One-time bootstrap (already done? skip)
 
 1. **R2 bucket**: Cloudflare → R2 → Create bucket → `devbox-backup`,
-   jurisdiction **EU**. Then *Manage API tokens* → token scoped to this bucket,
-   **Object Read & Write** → keys into `.r2-backend.env` + Bitwarden.
+   jurisdiction **EU**. Then *Manage R2 API tokens* → **Account API token**,
+   scoped to this bucket only, **Object Read & Write**. Copy the S3 key pair
+   (Access Key ID + Secret) — shown once.
 2. **Hetzner token**: console.hetzner.cloud → devbox project → Security → API
-   tokens → **Read & Write** → into `terraform.tfvars` + Bitwarden.
-3. **Adopt the running box** (no rebuild — import, don't recreate):
+   tokens → **Read & Write**. Copy — shown once.
+3. **Encrypt both into the store** (on the laptop; recipe per
+   [secrets.md](secrets.md) → "Adding a new encrypted secret"):
+
+   ```bash
+   cd ~/_work/devbox
+   AGE_PUB=$(grep -o 'age1[0-9a-z]*' secrets.local | head -1)
+
+   # Hetzner token (single line, no trailing newline)
+   printf '%s' '<HETZNER_TOKEN>' | age -r "$AGE_PUB" -o ansible/secrets/hetzner-token.age
+
+   # R2 state keys, env-file format
+   age -r "$AGE_PUB" -o ansible/secrets/r2-devbox-state.age <<EOF
+   AWS_ACCESS_KEY_ID=<R2_ACCESS_KEY_ID>
+   AWS_SECRET_ACCESS_KEY=<R2_SECRET_ACCESS_KEY>
+   EOF
+
+   git add ansible/secrets/hetzner-token.age ansible/secrets/r2-devbox-state.age
+   git commit -m "chore(secrets): add hetzner-token + r2-devbox-state" && git push
+   ```
+
+   Mind your shell history with inline secrets (`set +o history` first, or
+   paste into the heredoc) — hygiene notes in [secrets.md](secrets.md).
+4. **Adopt the running box** (no rebuild — import, don't recreate):
 
 ```bash
 # ids: hcloud CLI or console URLs (server page, project Security page)
@@ -114,9 +146,10 @@ the lifecycle block out first, deliberately.
 
 | Symptom | Fix |
 |---|---|
-| `init` fails with credentials error | `.r2-backend.env` missing/stale — restore from Bitwarden |
-| `Error: ... 401` from hcloud | Hetzner token revoked/expired — re-mint in console, update `terraform.tfvars` + Bitwarden |
-| State lost / bucket deleted | Resources still run. Recreate bucket, `init`, re-`import` the three resources (§ bootstrap step 3) |
+| `init` fails with credentials error | R2 key stale/revoked — roll it in Cloudflare, re-encrypt `r2-devbox-state.age` (§ bootstrap step 3), commit |
+| `Error: ... 401` from hcloud | Hetzner token revoked/expired — re-mint in console, re-encrypt `hetzner-token.age` (§ bootstrap step 3), commit |
+| `devbox-tf` errors about `secrets.local` | You're not on the laptop, or it's not restored — [secrets.md](secrets.md) → "Restoring on a new laptop" |
+| State lost / bucket deleted | Resources still run. Recreate bucket, `init`, re-`import` the three resources (§ bootstrap step 4) |
 | `plan` wants to replace the server unexpectedly | A create-time attr changed (image, ssh key). Check `lifecycle.ignore_changes` in `server.tf`; don't apply until understood |
 | Locked state (`.tflock`) after a crashed run | `bin/devbox-tf force-unlock <lock-id>` (id is in the error) |
 

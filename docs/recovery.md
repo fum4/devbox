@@ -20,7 +20,7 @@ You're on a new machine and need to restore everything.
 
 1. **Set up the laptop from scratch** per [laptop.md](laptop.md) — Homebrew, age, ansible, gh, generate new SSH keys, clone the devbox repo.
 2. **Register the new laptop's GitHub key** on https://github.com/settings/keys (same fum4 account as the old laptop).
-3. **Restore `secrets.local`** from your password manager — see [`secrets.md`](secrets.md) → "Restoring on a new laptop" for the verification loop. Also restore the **lane-2 Terraform creds** from Bitwarden (`terraform/devbox/terraform.tfvars` + `.r2-backend.env`) — see [`terraform.md`](terraform.md) → "Restoring on a new laptop".
+3. **Restore `secrets.local`** from your password manager — see [`secrets.md`](secrets.md) → "Restoring on a new laptop" for the verification loop. That's the only restore: the Terraform creds are age-encrypted in the repo and decrypt with it ([`terraform.md`](terraform.md) → "Restoring on a new laptop").
 4. **Update Hetzner** with the new laptop's `devbox_vps.pub`: it's a Terraform resource now — `bin/devbox-tf apply` re-registers it (replaces the `hcloud_ssh_key`; the running box's `authorized_keys` is step 5's job).
 5. **Update the existing VPS's `~/.ssh/authorized_keys`** so the new laptop can ssh in:
    - From any device that already has access (e.g. another laptop, or via the Hetzner Console *Rescue* mode), **on the VPS** (or in the Rescue console):
@@ -176,9 +176,9 @@ The user `fum4` must be in the `docker` group. The `docker` Ansible role adds th
 
 The live infra is never at risk from this — resources keep running regardless of state.
 
-- **`.r2-backend.env` / `terraform.tfvars` missing** (new laptop, deleted file): restore from Bitwarden — [`terraform.md`](terraform.md) → "Restoring on a new laptop".
+- **Creds "missing"** (new laptop): they aren't — they're age-encrypted in the repo (`ansible/secrets/hetzner-token.age`, `r2-devbox-state.age`). Restore `secrets.local` and `bin/devbox-tf` works again.
 - **State lost / `devbox-backup` bucket deleted**: recreate the bucket (EU jurisdiction), `bin/devbox-tf init`, re-import the three live resources — [`terraform.md`](terraform.md) → "One-time bootstrap" step 3. A follow-up `plan` should show no changes.
-- **Hetzner token revoked/expired**: re-mint in the console (R/W, devbox project), update `terraform.tfvars` + Bitwarden.
+- **Hetzner token revoked/expired**: re-mint in the console (R/W, devbox project), re-encrypt as `ansible/secrets/hetzner-token.age` ([`terraform.md`](terraform.md) → bootstrap step 3), commit.
 
 ## Whole-VPS rebuild from a degraded state
 

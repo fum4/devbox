@@ -2,7 +2,7 @@
 
 The Hetzner-UI parts that **stay manual**: account setup (one-time per account, sections 1–3) and the API token Terraform authenticates with (section 4). Creating/destroying the VPS itself is **no longer a UI flow** — it's Terraform (section 5 → [terraform.md](terraform.md)). Provider-specific knowledge stays in this one file; the post-create configuration flow lives in [provisioning.md](provisioning.md).
 
-**End state after sections 1–4**: account verified, payment on file, project `dev` exists, an API token for that project sits in `terraform/devbox/terraform.tfvars` (+ Bitwarden). From there, section 5 is one command.
+**End state after sections 1–4**: account verified, payment on file, project `dev` exists, an API token for that project age-encrypted at `ansible/secrets/hetzner-token.age`. From there, section 5 is one command.
 
 ## Prerequisites
 
@@ -56,7 +56,7 @@ Hetzner Console → your project → sidebar → **Security** → **API tokens**
 - **Description**: `devbox-terraform`
 - **Permissions**: **Read & Write**
 
-Copy the token (shown once) into `terraform/devbox/terraform.tfvars` (gitignored, mode 0600) **and** Bitwarden (*"devbox Hetzner API token"*). It's a lane-2 credential — see [secrets.md](secrets.md) → "The two lanes of secrets".
+Copy the token (shown once) and **age-encrypt it into the store** as `ansible/secrets/hetzner-token.age` — exact recipe in [terraform.md](terraform.md) → "One-time bootstrap" step 3. It does **not** go into Bitwarden or any plaintext file ([secrets.md](secrets.md) → the hard rule under "The two lanes of secrets").
 
 (The laptop's SSH key no longer needs manual uploading — Terraform registers `~/.ssh/devbox_vps.pub` as an `hcloud_ssh_key` resource.)
 

@@ -1,35 +1,46 @@
 #!/usr/bin/env bash
-# bin/devbox-tf — run Terraform for the devbox VPS (terraform/devbox/) with the
-# R2 state-backend credentials loaded.
+# bin/devbox-tf — run Terraform for the devbox VPS (terraform/devbox/) with
+# credentials decrypted from the repo's age store, in memory.
 #
 # Thin pass-through: `devbox-tf plan`, `devbox-tf apply`, `devbox-tf import …` —
 # anything after the script name goes straight to terraform. What it adds:
 #   - cd's to terraform/devbox regardless of cwd
-#   - sources .r2-backend.env (R2 state creds) into the environment
-#   - fails early, with a pointer, when a cred file is missing
+#   - decrypts ansible/secrets/hetzner-token.age   → HCLOUD_TOKEN (env)
+#   - decrypts ansible/secrets/r2-devbox-state.age → AWS_ACCESS_KEY_ID/SECRET (env)
+#   - plaintext never touches disk; no tfvars / cred files exist
 #
-# Runs on the LAPTOP (lane-2 creds live there — docs/secrets.md → "The two
-# lanes"; the box can't rebuild itself anyway). See docs/terraform.md.
+# Runs on the LAPTOP — decryption needs secrets.local (the devbox age key,
+# laptop-only per docs/secrets.md), and a dead box can't rebuild itself anyway.
+# See docs/terraform.md.
 set -euo pipefail
 
-TF_DIR="$(cd "$(dirname "$0")/../terraform/devbox" && pwd)"
-cd "$TF_DIR"
+REPO="$(cd "$(dirname "$0")/.." && pwd)"
+AGE_KEY="$REPO/secrets.local"
+SECRETS="$REPO/ansible/secrets"
 
-if [[ ! -f .r2-backend.env ]]; then
-  echo "ERROR: $TF_DIR/.r2-backend.env missing (R2 state creds)." >&2
-  echo "       Restore from Bitwarden per .r2-backend.env.example + docs/terraform.md." >&2
+if [[ ! -f "$AGE_KEY" ]]; then
+  echo "ERROR: $AGE_KEY missing (the devbox age key — laptop-only)." >&2
+  echo "       Restore from the password manager: docs/secrets.md → 'Restoring on a new laptop'." >&2
+  echo "       (If you're on the VPS: this command runs on the laptop only.)" >&2
   exit 2
 fi
 
-if [[ ! -f terraform.tfvars ]]; then
-  echo "ERROR: $TF_DIR/terraform.tfvars missing (Hetzner API token)." >&2
-  echo "       Restore from Bitwarden per terraform.tfvars.example + docs/terraform.md." >&2
-  exit 2
-fi
+for f in hetzner-token.age r2-devbox-state.age; do
+  if [[ ! -f "$SECRETS/$f" ]]; then
+    echo "ERROR: $SECRETS/$f missing." >&2
+    echo "       Bootstrap it per docs/terraform.md → 'One-time bootstrap'." >&2
+    exit 2
+  fi
+done
 
+HCLOUD_TOKEN="$(age -d -i "$AGE_KEY" "$SECRETS/hetzner-token.age")"
+export HCLOUD_TOKEN
+
+# r2-devbox-state.age decrypts to env-file lines: AWS_ACCESS_KEY_ID=… / AWS_SECRET_ACCESS_KEY=…
 set -a
 # shellcheck source=/dev/null
-. ./.r2-backend.env
+. <(age -d -i "$AGE_KEY" "$SECRETS/r2-devbox-state.age")
 set +a
 
+cd "$REPO/terraform/devbox"
 exec terraform "$@"

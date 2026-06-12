@@ -71,6 +71,8 @@ If all three decrypt cleanly, you're done — laptop is ready to run Ansible.
 | `ansible/secrets/apple-signin-key.age` | Apple *Sign in with Apple* private key (`.p8`, Team `SWXC85YFF4`) | **Nobody** — recovery backup only. Clerk holds the live copy; Apple lets you download the `.p8` just once. Team-scoped (serves any Sign-in-with-Apple app, not only Tipso). | **No** — never installed; decrypt on the laptop only to re-enter it into Clerk. |
 | `ansible/secrets/tipso-age-key.age` | the **tipso repo's** age private key | `repo-age-keys` role → `~/.config/age/tipso.key` (mode 0600). Lets the box run `mise run secrets:decrypt` in `~/code/tipso`. | Yes (the box decrypts that repo's secrets locally) |
 | `ansible/secrets/accounting-age-key.age` | the **accounting-sync repo's** age private key | `repo-age-keys` role → `~/.config/age/accounting.key` (mode 0600). | Yes (same) |
+| `ansible/secrets/hetzner-token.age` | Hetzner Cloud API token (R/W, devbox project) | `bin/devbox-tf` (not Ansible) → decrypted in memory, injected as `HCLOUD_TOKEN` for Terraform. See [`terraform.md`](terraform.md). | **No** — laptop-only, in memory |
+| `ansible/secrets/r2-devbox-state.age` | R2 access keys for the `devbox-backup` state bucket (env-file lines: `AWS_ACCESS_KEY_ID=…`, `AWS_SECRET_ACCESS_KEY=…`) | `bin/devbox-tf` (not Ansible) → sourced in memory for the Terraform S3 backend. | **No** — laptop-only, in memory |
 
 Why five secrets, three patterns: the OAuth `client_secret` is more powerful than the keys it mints, so we keep it on the controller. The GitHub PAT and SSH key are what the VPS actually needs in operation, so they have to live there. The Apple sign-in key is the third pattern: a recovery-only copy that no role consumes — encrypted in git purely so a one-time-download `.p8` is never lost. See [the PAT/OAuth explainer](#why-the-different-shapes) below.
 
@@ -187,14 +189,26 @@ A repo may add its own specifics, but the general shape is global:
 
 ### The two lanes of secrets
 
-- **Lane 1 — the age store** (everything above this section): a box/repo's *identity*
-  secrets, age-encrypted in git, Ansible-delivered at provision.
-- **Lane 2 — Terraform creds**: what a `terraform apply` consumes — the Hetzner
-  `HCLOUD_TOKEN` (`terraform.tfvars`) and the R2 backend keys (`.r2-backend.env`).
-  **Laptop-only, gitignored, mode 0600**, root of trust in the password manager. A
-  self-contained product repo may also fold these into its own `secrets/*.age` +
-  `mise run secrets:decrypt` (tipso does); the devbox's own box keeps them as
-  Bitwarden-backed gitignored files. Lane 2 is **not** the age store — don't conflate.
+Both lanes store the same way — **age-encrypted in git, always**. The lanes differ
+only in *who consumes the plaintext and where*:
+
+- **Lane 1 — Ansible-delivered**: a box/repo's *identity* secrets (GitHub key/PAT,
+  Tailscale OAuth, …). Decrypted on the laptop at playbook time; some plaintexts
+  are pushed to the box because the box needs them in operation.
+- **Lane 2 — Terraform-consumed**: what a `terraform apply` needs — the Hetzner
+  token (`hetzner-token.age`) and the R2 state-backend keys (`r2-devbox-state.age`).
+  Decrypted **in memory** by `bin/devbox-tf` on the laptop and injected as env vars
+  (`HCLOUD_TOKEN`, `AWS_*`); the plaintext never touches disk and **never reaches
+  the box**. tipso does the same with its own age key (`secrets/*.age` +
+  `mise run secrets:decrypt`).
+
+> **The hard rule — do not drift from this.** The password manager (Bitwarden)
+> holds **only** (a) age private keys and (b) provider account logins + 2FA
+> recovery codes. **Never** store an individual API token/key as a loose
+> password-manager entry, and **never** leave one as gitignored plaintext
+> (`*.tfvars`, `.env`, …) as its only durable home. If you mint a token, the same
+> sitting isn't over until it's `age`-encrypted and committed next to its owner.
+> A token that exists anywhere else is drift — re-encrypt it or revoke it.
 
 **Cross-repo rule:** each repo owns its own infra (`infra/terraform/` + its own state
 bucket); the devbox provisions only *itself* (`terraform/devbox/`). Reference

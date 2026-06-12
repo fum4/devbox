@@ -106,12 +106,13 @@ section "Terraform (terraform/devbox — see docs/terraform.md)"
 check "terraform on PATH" \
       "command -v terraform" \
       "brew install terraform (laptop) / mise install (box) — docs/terraform.md"
-check "terraform.tfvars present (Hetzner token)" \
-      "[[ -f terraform/devbox/terraform.tfvars ]]" \
-      "Restore from Bitwarden per terraform/devbox/terraform.tfvars.example"
-check ".r2-backend.env present (R2 state creds)" \
-      "[[ -f terraform/devbox/.r2-backend.env ]]" \
-      "Restore from Bitwarden per terraform/devbox/.r2-backend.env.example"
+check "hetzner-token.age present" \
+      "[[ -f ansible/secrets/hetzner-token.age ]]" \
+      "Bootstrap per docs/terraform.md → 'One-time bootstrap' step 3"
+check "r2-devbox-state.age present" \
+      "[[ -f ansible/secrets/r2-devbox-state.age ]]" \
+      "Bootstrap per docs/terraform.md → 'One-time bootstrap' step 3"
+# (decryptability is covered by the 'Encrypted secrets' loop above)
 if command -v terraform >/dev/null 2>&1; then
   check "config validates" \
         "terraform -chdir=terraform/devbox init -backend=false -input=false && terraform -chdir=terraform/devbox validate" \
