@@ -22,13 +22,10 @@ For the destructive version (forget the session + remove its worktree), that's
    The name is the matching filename minus `.env`. No match → this session is
    unmanaged (not systemd-spawned); say so and stop — there is no unit to park.
 
-2. **WIP sweep.** Read `CWD=` from the env file and check that checkout for
-   in-flight work:
-   - uncommitted changes — `git status --porcelain` (count staged/unstaged/untracked)
-   - unpushed commits — `git log @{u}..HEAD --oneline` (or "no upstream" if the
-     branch was never pushed)
-   - an open PR — `gh pr list --head <branch> --state open`
-   - a non-default branch checked out in a *main* checkout (a smell worth naming)
+2. **WIP sweep.** Read `CWD=` from the env file and run `wt wip <cwd>` — one
+   call reports branch, uncommitted changes, stashes, unpushed commits, and PR
+   state. Also worth naming: a non-default branch checked out in a *main*
+   checkout (a smell).
 
    Parking destroys none of this — the worktree stays — but the user asked to be
    told, so tell them.

@@ -78,14 +78,18 @@ The `description` is the most important field — both agents use it to decide w
 
 | Skill | Triggers on |
 |---|---|
-| [`sessions`](skills/sessions/) | `/sessions` or "what's running" — inventory of every live Claude session + worktree, each with a one-line gist from the *transcript* (not the name). Backs the session-start ritual. Built on the `claude-sessions` helper. |
+| [`sessions`](skills/sessions/) | `/sessions`, `/status`, or "what's running" — full inventory: every Claude session (one-line gist from the *transcript*, not the name), every worktree (uncommitted / no-session flags), and the dev-server stacks. Backs the session-start ritual. Built on the `claude-sessions` helper. |
 | [`help`](skills/help/) | `/help` — list all available skills + one-line descriptions. |
-| [`prune`](skills/prune/) | `/prune` — session-aware cleanup: lists stale worktrees/sessions with reasons, confirms per item, never touches anything live or with uncommitted work, and parks sessions (`claude-park`) rather than killing them. |
+| [`prune`](skills/prune/) | `/prune` — clean-up review board: every session + worktree with WIP facts (`wt wip`) and a suggested action each (keep / park / kill / remove); the user picks, per item. Nothing acts without confirmation. |
+| [`park`](skills/park/) | `/park` — stop a session, keep the conversation + worktree. Surfaces WIP first; reversible with `claude-restore`. |
+| [`kill`](skills/kill/) | `/kill` — destroy a session + its worktree, deliberately. Surfaces what's lost, requires explicit acknowledgment; never removes a main checkout. |
 | [`new-chat-session`](skills/new-chat-session/) | `/new-chat-session` — spawn a fresh general-purpose session (via `claude-spawn`), attachable from the phone. |
 | [`new-work-session`](skills/new-work-session/) | `/new-work-session` — spawn a session primed (via `--append-system-prompt`) to clarify the task, then create a worktree before writing any code. |
-| [`parallel-work`](skills/parallel-work/) | Starting a new unrelated feature, parallel work, separate bug — guides the agent to use `wt new` for worktrees. |
-| [`clone-repo`](skills/clone-repo/) | Cloning / setting up / starting work on a new GitHub repo on the devbox — clone, inspect, propose `devbox-scaffold`, wait for approval, scaffold, open workspace. |
+| [`new-repo`](skills/new-repo/) | `/new-repo` — create a brand-new GitHub repo under fum4/, scaffold the dev contract, wire into `repos.txt`, spawn a session. |
+| [`clone-repo`](skills/clone-repo/) | Cloning / setting up / starting work on an existing GitHub repo on the devbox — clone, inspect, propose `devbox-scaffold`, wait for approval, scaffold, open workspace. |
 | [`serve`](skills/serve/) | `/serve` — start / stop / restart / check the dev servers for the current repo/worktree. Inspects what's bound, identifies which worktree owns each process, asks before killing competing servers. |
+
+When to use a worktree is a judgment call, not a skill — see `AGENTS.md` → "When to use a worktree" (quick fix → default branch; feature-sized → propose a worktree first).
 
 ## Adding a new skill
 
