@@ -50,7 +50,7 @@ Not a docs flow — use the `clone-repo` skill on the devbox itself. Either tell
 | [`hermes.md`](hermes.md) | Anyone touching the orchestration layer | Evaluation of Hermes Agent as the orchestration brain: fit analysis, model strategy, migration plan, open decisions (status: not yet adopted) |
 | [`recovery.md`](recovery.md) | Incident response | Symptom → cause → fix matrix |
 
-> The **standalone Hermes assistant** (private calendar/finance/briefing concierge on its own VPS) now lives in its **own repo** — `fum4/hermes-assistant` (`docs/design.md`). It's a separate product, not devbox infra; only the orchestration-eval `hermes.md` stays here.
+> **Jarvis** — the standalone personal/business assistant (private calendar/finance/briefing concierge on its own VPS, built on Hermes Agent) — lives in its **own repo**, [`fum4/jarvis`](https://github.com/fum4/jarvis) (`docs/design.md`). It's a separate product, not devbox infra; only the orchestration-eval `hermes.md` stays here.
 
 ## Things NOT in this directory
 

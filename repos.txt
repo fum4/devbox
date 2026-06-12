@@ -22,5 +22,5 @@
 fum4/chartekk
 fum4/devbox
 fum4/easyskills
-fum4/hermes-assistant
+fum4/jarvis
 fum4/tipso
