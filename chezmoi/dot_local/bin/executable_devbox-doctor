@@ -93,6 +93,7 @@ check_symlink "$HOME/.codex/skills"
 
 # ~/.agents/skills is a real directory of per-skill symlinks (custom → devbox
 # repo, vendored → the easyskills store). Healthy = a dir with no broken links.
+# shellcheck disable=SC2088  # the ~ in the message strings is display text, not a path
 if [[ -d "$HOME/.agents/skills" && ! -L "$HOME/.agents/skills" ]]; then
     broken=$(find "$HOME/.agents/skills" -maxdepth 1 -xtype l | wc -l)
     if (( broken == 0 )); then

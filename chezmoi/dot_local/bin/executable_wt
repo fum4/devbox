@@ -150,6 +150,7 @@ cmd_wip() {
     if [[ "$branch" == "$default" || "$branch" == "DETACHED" ]]; then
         echo "pr: n/a"
     else
+        # shellcheck disable=SC2015  # `|| true` is ignore-failure, not if-then-else
         pr=$(cd "$root" && gh pr list --head "$branch" --state all \
              --json number,state --jq '.[0] | "#\(.number) \(.state)"' 2>/dev/null || true)
         echo "pr: ${pr:-none}"
