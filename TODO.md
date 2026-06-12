@@ -68,11 +68,11 @@ build not started. Owner wants to spike on **Claude subscription OAuth** first
   exfiltration is the headline risk). Email triage added **last**, isolated.
 
 **First steps:**
-- [ ] Provision the separate VPS (decide: second host in this Ansible inventory
-  with its own secrets bundle, vs own repo — leaning shared-repo/separate-secrets).
-  Once the devbox Terraform lands (see "Provision the devbox VPS via Terraform"
-  above), Hermes gets its box from `terraform/hermes/` via the shared
-  `terraform/modules/hetzner-box` module — that's the rule-of-two trigger to factor it.
+- [ ] Provision the separate VPS. **Decided (2026-06-12): Hermes is its own repo**
+  ([`fum4/hermes-assistant`](https://github.com/fum4/hermes-assistant), created) —
+  per the cross-repo rule in `docs/secrets.md` → "Global doctrine", each repo owns
+  its own infra; the devbox provisions only itself. Hermes' Terraform lives there
+  (no shared module with `terraform/devbox/`).
 - [ ] Install Hermes declaratively (uv + pinned release tag, not `curl|bash`);
   systemd user unit for the gateway (mirror `claude@.service`).
 - [ ] Spike on Claude OAuth; build the finance-view skill against `backups/*.csv`.
