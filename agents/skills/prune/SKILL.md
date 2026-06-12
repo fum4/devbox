@@ -46,11 +46,21 @@ act** — nothing recoverable-only-by-luck ever gets destroyed.
    Idle time alone is never a park/kill reason — a session left open for days
    may be intentional. When in doubt, suggest keep or park, not kill.
 
-4. **The user decides.** Ask explicitly which items to act on and *how* —
-   park vs kill vs remove-worktree are different fates; don't collapse them
-   into one "clean it" yes/no. (AskUserQuestion with multi-select works well:
-   one question per suggested-action group.) Anything not explicitly picked is
-   kept.
+4. **The user decides — one tappable question per item.** After showing the
+   board, use AskUserQuestion with **one single-select question per candidate**
+   (up to 4 per call; batch further candidates into a follow-up call):
+
+   - header: the session/worktree name
+   - question: one line of the key facts ("parked 12d, PR #7 MERGED, clean —
+     what should happen?")
+   - options: **Keep** / **Park** / **Kill (+ worktree)** / **Remove worktree**
+     — only the fates that apply to that item, with the suggested one first and
+     marked "(Recommended)"
+
+   Park vs kill vs remove are different fates; never collapse them into one
+   "clean it all?" yes/no. Items the user doesn't pick a destructive fate for
+   are kept. Only list items whose suggestion is *not* "keep" — the board
+   already shows the keeps.
 
 5. **Act on confirmed items only:**
    - park session → `claude-park <name>` (reversible — `claude-restore <name>`)
