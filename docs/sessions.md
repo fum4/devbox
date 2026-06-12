@@ -180,6 +180,33 @@ the agents and servers keep running under their real owners. Zellij is launched
 interactively when you attach from the laptop; it does **not** need to be
 supervised or survive anything.
 
+## Session lifecycle: spawn → park / restore → kill
+
+Four helpers own the lifecycle; the matching skills add the judgment layer
+(WIP checks + user confirmation) on top:
+
+| Operation | Command | Effect | Reversible? |
+|---|---|---|---|
+| Spawn | `claude-spawn --name <n> --cwd <d>` | unit started, fresh conversation id pinned in `<n>.env` | — |
+| Park | `claude-park <n>` (judgment: `/park`) | unit stopped; env file + conversation **kept**; logged to `~/.claude/parked-sessions.log` | yes — `claude-restore <n>` |
+| Restore | `claude-restore <n>` | unit started again, resumes the *exact* pinned conversation | — |
+| Kill | `claude-kill <n> [--rm-worktree] [--force]` (judgment: `/kill`) | unit stopped; session **forgotten** (env file removed — leaves `claude-restore`); optionally removes the cwd *if it's a linked worktree* (+ local branch); logged to `~/.claude/killed-sessions.log` | partially — transcript survives in `~/.claude/projects/`; resurrect via `claude-spawn --resume <id>` (id is in the kill log). The worktree + uncommitted work are gone for real. |
+
+Guard rails built into `claude-kill`:
+
+- **A main checkout is never removed** — `--rm-worktree` only acts when the cwd
+  is a *linked* worktree (`--git-dir` ≠ `--git-common-dir`).
+- **Self-kill is safe**: invoked from inside the session being killed (the
+  `/kill` skill's normal case), it re-execs into a transient systemd unit so the
+  cleanup survives the caller's own death.
+- **Log first, act second** (same as `claude-park`): the kill log line with the
+  resurrect command is written before anything stops.
+
+The `/park` and `/kill` skills surface in-flight work (uncommitted changes,
+unpushed commits, open PRs) and re-ask before acting — use them rather than the
+raw helpers when driving by chat. `/prune` is the batch flavor for cleanup
+across many worktrees/sessions.
+
 ## What changes in the repo
 
 | Area | Change |
