@@ -4,20 +4,22 @@
 # normal apply needs no input at all.
 
 variable "server_name" {
-  description = "Server name = hostname = SSH alias = Tailscale machine name. One name everywhere."
+  description = "Server name = OS hostname = SSH alias = Tailscale machine name. The live box is 'devbox-1' everywhere; keep it so (renaming to plain 'devbox' is a deliberate cross-cutting job — rDNS + OS hostname + Tailscale)."
   type        = string
-  default     = "devbox"
+  default     = "devbox-1"
 }
 
 variable "server_type" {
   description = <<-EOT
-    Hetzner server type. cx33 = x86, 4 vCPU / 8 GB / 80 GB, ~EUR6.49/mo — sized
-    for parallel agent sessions + per-project Docker infra (see docs/hetzner.md
-    "Recurring costs"). Resizing later is a console Rescale, not a Terraform
-    concern (same IP/disk).
+    Hetzner server type. cx43 = the live box's actual type (the old docs said
+    cx33, which was wrong — adopting reality, NOT downsizing). Sized for parallel
+    agent sessions + per-project Docker infra. A change here rescales the box
+    in-place (brief poweroff, same IP; disk grows irreversibly unless keep_disk)
+    — see docs/hetzner.md "Recurring costs". Downsizing is a deliberate act, not
+    a drift fix.
   EOT
   type        = string
-  default     = "cx33"
+  default     = "cx43"
 }
 
 variable "location" {
