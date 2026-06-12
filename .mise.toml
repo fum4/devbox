@@ -1,0 +1,18 @@
+# Dev contract for the devbox repo itself (mostly Ansible/chezmoi — those come
+# from system packages; mise only pins the extra tooling).
+
+[tools]
+# Used by terraform/devbox (see docs/terraform.md). Pinned so laptop and box
+# resolve the same version; bump deliberately.
+terraform = "1.15.6"
+
+[tasks.setup]
+description = "First-time install: warm Terraform providers (no backend/creds needed)"
+run = "terraform -chdir=terraform/devbox init -backend=false -input=false"
+
+[tasks."tf:check"]
+description = "Format-check + validate the Terraform config (what CI runs)"
+run = """
+terraform -chdir=terraform/devbox fmt -check -recursive
+terraform -chdir=terraform/devbox validate
+"""
