@@ -9,7 +9,7 @@
 
 How long-lived processes on the devbox are kept alive, isolated, reachable from
 the phone, and viewable from the laptop. This is the contract behind `/sessions`,
-`/status`, `/serve`, `claude-spawn`, and `zj`.
+`/serve`, `claude-spawn`, and `zj`.
 
 ## The problem this solves
 
@@ -218,7 +218,7 @@ across many worktrees/sessions.
 | `claude-sessions` | Rewrite enumeration: `systemctl --user list-units 'claude@*'` as truth (+ journald/transcript for the gist), instead of `pgrep`/`/proc` scraping. |
 | `zj` | Rewrite: generate the dashboard layout (dtach-attach agents + `process-compose attach`). |
 | `/serve` skill | Point at each project's `process-compose.yaml`. |
-| `/sessions`, `/status`, `/prune`, `/new-chat-session`, `/new-work-session` | Update to the systemd model (start/stop/park = unit operations; "park" records the resume id and `stop`s the unit). |
+| `/sessions`, `/prune`, `/new-chat-session`, `/new-work-session` | Update to the systemd model (start/stop/park = unit operations; "park" records the resume id and `stop`s the unit). (`/status` later merged into `/sessions`.) |
 | Per-project `process-compose.yaml` (new, per repo) | Describe the dev-server stack (wrap existing `mise run` tasks). Start with kost. |
 | `agents/AGENTS.md` | Replace "long-running processes go in Zellij" with this model; link here. |
 | `docs/README.md`, `docs/recovery.md` | Index this doc; add session symptoms (agent unit dead, socket stale, dashboard won't attach). |
