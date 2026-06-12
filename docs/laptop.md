@@ -29,10 +29,10 @@ brew --version
 ## 2. Install the core CLI tools
 
 ```bash
-brew install age ansible gh git
+brew install age ansible gh git terraform
 ```
 
-That's it for the brews needed in this session. Other tooling (mise, claude, zellij, etc.) gets installed *on the devbox VPS*, not the laptop.
+That's it for the brews needed in this session. (`terraform` creates/destroys the VPS itself — see [terraform.md](terraform.md).) Other tooling (mise, claude, zellij, etc.) gets installed *on the devbox VPS*, not the laptop.
 
 Verify:
 
@@ -40,6 +40,7 @@ Verify:
 age --version
 ansible --version
 gh --version
+terraform --version
 ```
 
 ## 3. Generate SSH keys
