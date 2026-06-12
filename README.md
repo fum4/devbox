@@ -28,7 +28,7 @@ devbox/
 │   └── skills/          on-demand capabilities (clone-repo, prune, park, kill, …)
 ├── chezmoi/             user-level dotfiles — see chezmoi/README.md
 │   ├── dot_bashrc
-│   ├── dot_claude/symlink_settings.json   symlinks ~/.claude/settings.json into agents/claude/
+│   ├── private_dot_claude/symlink_settings.json   symlinks ~/.claude/settings.json into agents/claude/
 │   ├── dot_config/zellij/config.kdl
 │   └── dot_local/bin/
 │       ├── executable_zj                workspace launcher (Zellij sessions)

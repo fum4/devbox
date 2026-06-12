@@ -27,7 +27,7 @@ Prefixes nest naturally: `private_dot_ssh/config` → `~/.ssh/config` with `0600
 ```
 chezmoi/
 ├── dot_bashrc                              → ~/.bashrc
-├── dot_claude/
+├── private_dot_claude/      (private_ → ~/.claude gets mode 700; it holds credentials)
 │   └── symlink_settings.json               → ~/.claude/settings.json   (symlink into agents/claude/)
 ├── dot_config/
 │   └── zellij/
@@ -56,11 +56,11 @@ Minimal interactive shell setup. **No human-ergonomics layer** (no fancy prompt,
 - mise activation (per-project tool versions, tasks, env vars)
 - Sources `~/.bashrc.local` if present (escape hatch for machine-specific extras)
 
-### `dot_claude/symlink_settings.json`
+### `private_dot_claude/symlink_settings.json`
 
 Materializes `~/.claude/settings.json` as a **symlink** into `~/code/devbox/agents/claude/settings.json` (not a copy). The file's body is the literal target path — that's how chezmoi's `symlink_` prefix works.
 
-Why a symlink and not a copy: the Claude config is *agent-layer* state, so its canonical home is `agents/claude/` (see `agents/README.md`). chezmoi's job here is just to put a symlink at the right `~/.X` path. Editing `agents/claude/settings.json` is live immediately — no `chezmoi apply` needed for content changes; only re-run apply when adding a *new* file under `dot_claude/`.
+Why a symlink and not a copy: the Claude config is *agent-layer* state, so its canonical home is `agents/claude/` (see `agents/README.md`). chezmoi's job here is just to put a symlink at the right `~/.X` path. Editing `agents/claude/settings.json` is live immediately — no `chezmoi apply` needed for content changes; only re-run apply when adding a *new* file under `private_dot_claude/`.
 
 ### `dot_config/zellij/config.kdl`
 

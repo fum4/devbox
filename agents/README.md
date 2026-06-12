@@ -18,7 +18,7 @@ agents/
 
 ## How it materializes on the VPS
 
-The `agents` Ansible role creates `~/.agents/` as the cross-agent home (per the Agent Skills open standard), with each entry symlinked into this directory; both Claude Code's and Codex's expected paths then symlink at `~/.agents/`. A separate chezmoi `symlink_` stub (`chezmoi/dot_claude/symlink_settings.json`) points `~/.claude/settings.json` straight at `agents/claude/settings.json`:
+The `agents` Ansible role creates `~/.agents/` as the cross-agent home (per the Agent Skills open standard), with each entry symlinked into this directory; both Claude Code's and Codex's expected paths then symlink at `~/.agents/`. A separate chezmoi `symlink_` stub (`chezmoi/private_dot_claude/symlink_settings.json`) points `~/.claude/settings.json` straight at `agents/claude/settings.json`:
 
 ```
 ~/code/devbox/agents/                  ← canonical source (this directory, checked out on the VPS)
