@@ -39,6 +39,36 @@ verbatim and adjust the manifest.
   secrets:decrypt`); tools read the plaintext (Terraform reads `terraform.tfvars`,
   sources `.r2-backend.env`). Never commit plaintext or the private key.
 
+## Env config: the repo is the source of truth; the runtime is fed from it
+
+Applies to any repo whose app runs on a PaaS/runtime with its own env store
+(Coolify, Vercel, Fly, …). **The repo is the source of truth for env config across
+every environment (dev / staging / prod); the runtime is *fed* from the repo,
+never the reverse.** A runtime that holds the only copy of its own input config is
+a single point of loss — tipso lost its prod env when the Coolify control plane
+was migrated and wiped, recoverable only from a nightly backup. "Durable in the
+PaaS + a backup" is *recovery*, not a source of truth. Rules:
+
+- **Explicit per-env encrypted files:** `secrets/<app>.<env>.env.age`
+  (`api.dev.env.age`, `api.staging.env.age`, `api.prod.env.age`). One file per env
+  — visible in `ls`, per-env blast radius, unambiguous to target.
+- **A push tool feeds the runtime:** `mise run env:push <env>` decrypts that env's
+  file and writes it into the env's runtime app over the runtime's API;
+  `mise run env:diff <env>` verifies live ↔ repo (values redacted) to catch drift.
+  Recovering an env's config is then **one command**, not a backup restore.
+  Reference impl: tipso `tools/coolify-env.sh` + its ADR 0008.
+- **Only real secrets in the `.age` files.** Non-secret flags (`NODE_ENV`, log
+  level, feature toggles, model ids) live with the deploy manifest
+  (compose / `vercel.json`) + the app's typed-config defaults — never duplicated
+  into the secret files.
+- **One source per env — no committed `.env.example`.** The app's typed env schema
+  (e.g. `config/env.ts`, zod-parsed at boot) is the *contract*; `secrets/*.age` are
+  the *values*; `secrets:decrypt` materializes the runtime `.env`. A committed
+  `.env.example` is a second, drift-prone copy of the same thing — so onboarding is
+  "restore the age key → `secrets:decrypt`", not "copy the example". (A keyless
+  dev boot is the only thing lost — fine, the `repo-age-keys` role always installs
+  the key.)
+
 ## Setting up a NEW repo's secrets
 
 ```bash
