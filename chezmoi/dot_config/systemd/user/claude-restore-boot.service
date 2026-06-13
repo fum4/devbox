@@ -1,0 +1,28 @@
+# Auto-restore agent sessions after a reboot. Runs ONCE at boot (pulled into
+# default.target via the default.target.wants symlink) and calls `claude-restore
+# --all`, which starts every session that was live before the reboot — resuming
+# each one's *exact* conversation from its persisted env file.
+#
+# Why a helper unit and not enabling claude@<name> instances directly: the set of
+# live sessions is dynamic (spawned/parked at runtime), so there's nothing static
+# to enable. claude-restore reads the env files that survive the reboot and brings
+# back exactly what was running. (On a fresh REBUILD those env files are gone with
+# the disk, so this no-ops — correct: there's nothing to resume.)
+#
+# Stagger + settle delay tame the documented memory-stampede risk of reloading
+# several large contexts at once (see docs/sessions.md "Boot policy"). The 2G swap
+# and per-session MemoryHigh=3G are the other half of that mat.
+[Unit]
+Description=Restore Claude agent sessions after a reboot
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Let the box settle (network, user bus) before reloading a fleet.
+ExecStartPre=/bin/sleep 10
+# Space the starts out so contexts don't all reload in the same instant.
+Environment=CLAUDE_RESTORE_STAGGER_SECS=8
+ExecStart=%h/.local/bin/claude-restore --all
+
+[Install]
+WantedBy=default.target

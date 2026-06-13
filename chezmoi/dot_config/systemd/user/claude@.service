@@ -31,7 +31,8 @@ RestartSec=2
 MemoryHigh=3G
 
 [Install]
-# Not enabled at boot by design (auto-resuming a fleet mid-task is unsafe — see
-# docs/sessions.md "Boot policy"). Present so `systemctl --user enable` works if
-# ever wanted; restore-after-reboot is the `claude-restore` helper's job.
+# Individual instances are not enabled directly (the live set is dynamic — nothing
+# static to enable). Restore-after-reboot is handled by claude-restore-boot.service,
+# which runs `claude-restore --all` (staggered) at boot; `claude-restore` by hand
+# does the same on demand. See docs/sessions.md "Boot policy".
 WantedBy=default.target
