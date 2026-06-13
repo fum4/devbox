@@ -43,6 +43,7 @@ Not a docs flow — use the `clone-repo` skill on the devbox itself. Either tell
 | [`hetzner.md`](hetzner.md) | First-time Hetzner user | Account + project ready, API token minted for Terraform |
 | [`terraform.md`](terraform.md) | Every server create/destroy/rebuild | The box as code: stable IP, R2 state, import/rebuild runbooks |
 | [`tailscale.md`](tailscale.md) | First-time Tailscale user | Tailnet up, MagicDNS on, laptop + phone connected, OAuth client bootstrapped for unattended provisioning |
+| [`tailscale-provisioning.md`](tailscale-provisioning.md) | Provisioning any device onto the tailnet | The one zero-drift pattern: tagged join via a per-device OAuth client that mints fresh single-use keys (Ansible + Terraform paths); never a standing key or a console tag |
 | [`secrets.md`](secrets.md) | Anyone touching `ansible/secrets/`, anyone restoring on a new laptop | Understanding of the encryption pattern + new-laptop restore recipe + how to add new secrets |
 | [`github.md`](github.md) | First-time, or rotating secrets | Age-encrypted SSH key + PAT in the repo, public key registered on GitHub |
 | [`provisioning.md`](provisioning.md) | Every VPS provision | Fully configured VPS, agents driveable from phone |
