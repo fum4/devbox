@@ -32,6 +32,14 @@ resource "hcloud_server" "devbox" {
     # users/keys afterwards), and the image only matters at create — neither may
     # force a replace on a running box. NO prevent_destroy here: destroying the
     # server is the supported rebuild flow; the primary IP carries continuity.
-    ignore_changes = [ssh_keys, image]
+    #
+    # public_net is ignored on UPDATE for the same continuity reason — and it is
+    # load-bearing: adding/altering this block on a *running* server makes the
+    # hcloud provider power-cycle + detach/reassign the primary IP, and that
+    # detach once DELETED the primary IP (the IPv4 was lost; a same-address
+    # replacement had to be recreated by hand). ignore_changes does NOT affect
+    # CREATE, so a rebuild still attaches the IP from config — we only refuse to
+    # re-touch the network plumbing on an already-running box.
+    ignore_changes = [ssh_keys, image, public_net]
   }
 }
