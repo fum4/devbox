@@ -13,6 +13,20 @@ At the very start of every new session — before addressing the user's first re
 
 Then proceed with the user's actual request. (This ritual is global across all repos, not just devbox.)
 
+## Session & context hygiene — proactively suggest when to split or reset
+
+A session's context is a working resource, not a dumping ground. **Continuously watch for the moment a session has outgrown its current shape, and proactively say so** — don't wait to be asked. The user wants to be told *when* to start a new session, branch a worktree, `/clear`, or park/kill the current one, with a recommendation and the reasoning.
+
+Flag it (with a concrete suggestion) when you notice any of:
+
+- **Topic shift.** The next piece of work is a *different concern* from what filled the context (e.g. you just did infra + a long research thread, and now it's time to write feature code). A fresh, lean session beats dragging unrelated context along.
+- **New feature-sized work.** Anything multi-commit / real blast radius → propose a `/new-work-session` (clarifies the task, then cuts its own worktree) rather than starting code in a long-running chat. Tie the new session to its brief (e.g. an ADR or plan doc).
+- **Context bloat.** The conversation has grown long or wandered across many subjects, so responses risk getting slower / less focused → suggest `/clear` (same task, clean slate) or a new session (different task).
+- **Clean stopping point.** The current session's deliverables are all committed/merged and nothing is in-flight → say so and recommend park (reversible, keeps the conversation) vs kill (durable output already captured elsewhere, e.g. in an ADR/PR).
+- **Two sessions converging on one repo** → worktree, always (the one non-negotiable from the branch/PR workflow).
+
+Make it a **recommendation, not a unilateral action**: name the move (new work session / `/clear` / park / kill / worktree), the *why*, and let the user decide. Prefer the reversible option when unsure (park over kill, worktree over shared branch). This complements — does not replace — the "Postponed work goes in `TODO.md`" and "Build on what we learn" rules below.
+
 ## Layout
 
 - **Repos**: `~/code/<project-name>/` (e.g. `~/code/tipso`). Each is its own git repo.
