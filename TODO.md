@@ -33,20 +33,6 @@ job, the same laptop-only way it delivers its own identity. See `docs/secrets.md
 > Depends on kost first generating its own age key — see kost `TODO.md`. The two
 > are a pair: kost owns its encrypted secrets; the devbox delivers the key.
 
-## Terraform: migrate primary IP `datacenter` → `location` before 1 July 2026
-
-The devbox is now fully Terraform-adopted (✅ done 2026-06-13 — server + stable
-primary IP + firewall imported, `plan` = no changes). One follow-up remains:
-`terraform/devbox/primary-ip.tf` uses the **deprecated `datacenter` attribute**
-(`hel1-dc2`), which Hetzner removes **after 1 July 2026**
-([changelog](https://docs.hetzner.com/changelog#2025-12-16-phasing-out-datacenters)).
-
-- [ ] Switch `hcloud_primary_ip.devbox` from `datacenter = "hel1-dc2"` to
-  `location = "hel1"` (drop the `primary_ip_datacenter` var). **Verify the plan
-  shows in-place / no-op, NOT replacement** — recreating the primary IP would
-  lose the stable IP. Test carefully (`bin/devbox-tf plan` on the laptop) before
-  apply; if it wants to replace, stop and find the non-destructive path.
-
 ## Wire up ntfy push notifications
 
 **Why:** ntfy is installed but dormant. Phone-driven sessions would benefit from
