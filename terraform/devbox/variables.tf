@@ -28,17 +28,6 @@ variable "location" {
   default     = "hel1"
 }
 
-variable "primary_ip_datacenter" {
-  description = <<-EOT
-    Datacenter of the stable primary IP (primary IPs are datacenter-scoped, not
-    region-scoped — "hel1-dc2" is hel1's only public DC). Must match where the
-    server lands; only relevant when creating the IP fresh (on import it's read
-    from the live resource).
-  EOT
-  type        = string
-  default     = "hel1-dc2"
-}
-
 variable "server_image" {
   description = "OS image. debian-12 — what every Ansible role + doc assumes."
   type        = string

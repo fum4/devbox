@@ -13,7 +13,7 @@ resource "hcloud_primary_ip" "devbox" {
   name        = "${var.server_name}-ip"
   type        = "ipv4"
   auto_delete = false
-  datacenter  = var.primary_ip_datacenter
+  location    = var.location # was `datacenter` (hel1-dc2); Hetzner deprecated it (removed after 2026-07-01). location is region-scoped; the IP and the server it serves must share it, so reuse var.location.
 
   labels = {
     project = "devbox"
