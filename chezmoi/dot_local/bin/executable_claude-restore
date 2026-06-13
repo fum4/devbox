@@ -2,10 +2,11 @@
 # claude-restore — bring back agent sessions that are known but not running.
 #
 # Agent sessions live as systemd user units (claude@<name>.service) with a
-# persisted env file. They are deliberately NOT auto-started at boot (resuming a
-# fleet mid-task unattended is unsafe — see docs/sessions.md "Boot policy"), so
-# after a reboot, or after parking sessions, this is how you bring them back. Each
-# restored session resumes its *exact* conversation (the pinned SESSION_ID).
+# persisted env file. At boot, claude-restore-boot.service runs this with `--all`
+# (staggered) to bring back whatever was live before the reboot; you also run it
+# by hand after parking sessions or to restore a subset. Each restored session
+# resumes its *exact* conversation (the pinned SESSION_ID). See docs/sessions.md
+# "Boot policy".
 #
 #   claude-restore                 list restorable sessions (known but not active)
 #   claude-restore <name>...       restore the named session(s)
@@ -90,7 +91,16 @@ systemctl --user daemon-reload
 if [[ "${1:-}" == "--all" ]]; then
     [[ ${#REST[@]} -gt 0 ]] || { echo "Nothing to restore."; exit 0; }
     echo "Restoring ${#REST[@]} session(s):"
-    for name in "${REST[@]}"; do start_one "$name"; done
+    # Optional inter-start delay (env, default 0) — the boot unit sets this so a
+    # fleet of large contexts doesn't reload in the same instant (memory
+    # stampede). Interactive use leaves it unset = no delay.
+    stagger="${CLAUDE_RESTORE_STAGGER_SECS:-0}"
+    n=0
+    for name in "${REST[@]}"; do
+        (( n > 0 )) && (( stagger > 0 )) && sleep "$stagger"
+        start_one "$name"
+        n=$((n + 1))
+    done
 else
     echo "Restoring:"
     for name in "$@"; do start_one "$name"; done

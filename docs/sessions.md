@@ -244,19 +244,24 @@ across many worktrees/sessions.
    what the phone shows, what `/sessions` lists, and what the unit is — while the
    UUID guarantees a restart resumes the exact conversation. `zj` maps project →
    agent units by the `CWD` recorded in each env file.
-4. **Boot policy = explicit restore (proposed).** Agent units are **not** enabled
-   at boot. Rationale: across SSH drops, laptop sleep, and a dead Zellij viewer
-   the agent *process never dies* — that's now seamless. A full box reboot is the
-   one case where the process necessarily dies, and reboots are rare and usually
-   deliberate (`devbox-reprov`, kernel update). Auto-resuming a fleet of agents at
-   boot risks (a) a memory stampede as several large contexts reload at once and
-   (b) an agent that was mid-tool-loop resuming unattended under
-   `bypassPermissions`. Instead, a **`claude-restore`** helper lists the sessions
-   that were live before the reboot (from their persisted env files) and resumes
-   all / a selected subset on demand — surfaced by the session-start ritual
-   (`/sessions` notes "N sessions were live before the last reboot →
-   `claude-restore`"). One deliberate command, full visibility, no stampede.
-   *Open for your call: this, or true auto-restore-on-boot.*
+4. **Boot policy = auto-restore on boot (staggered).** Across SSH drops, laptop
+   sleep, and a dead Zellij viewer the agent *process never dies* — seamless. A
+   full box reboot is the one case where the process necessarily dies, so
+   **`claude-restore-boot.service`** (a user oneshot, pulled into `default.target`)
+   runs **`claude-restore --all`** at boot and brings back every session that was
+   live before the reboot — each resuming its *exact* pinned conversation from its
+   persisted env file. The two classic risks are mitigated, not ignored: the unit
+   waits 10s for the box to settle and sets `CLAUDE_RESTORE_STAGGER_SECS=8` so
+   contexts reload one at a time rather than in a **stampede** (with the 2G swap +
+   per-session `MemoryHigh=3G` as the backstop); and the **`bypassPermissions`**
+   worry is moot in practice — a restored session loads its conversation and
+   *waits for input*, it doesn't autonomously continue a mid-tool-loop. `claude-restore`
+   by hand still does the same on demand (restore a subset, or after parking).
+   Individual `claude@<name>` instances are deliberately *not* enabled directly —
+   the live set is dynamic, so there's nothing static to enable; the helper reads
+   the env files instead. (A fresh *rebuild* has no env files — nothing to resume,
+   and the conversations are gone with the disk; that's a separate, un-addressed
+   gap, not what this covers.)
 
 ## Migration
 

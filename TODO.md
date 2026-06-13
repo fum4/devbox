@@ -33,19 +33,22 @@ job, the same laptop-only way it delivers its own identity. See `docs/secrets.md
 > Depends on kost first generating its own age key — see kost `TODO.md`. The two
 > are a pair: kost owns its encrypted secrets; the devbox delivers the key.
 
-## Terraform: migrate primary IP `datacenter` → `location` before 1 July 2026
+## Secrets: deliver jarvis's age key to the box
 
-The devbox is now fully Terraform-adopted (✅ done 2026-06-13 — server + stable
-primary IP + firewall imported, `plan` = no changes). One follow-up remains:
-`terraform/devbox/primary-ip.tf` uses the **deprecated `datacenter` attribute**
-(`hel1-dc2`), which Hetzner removes **after 1 July 2026**
-([changelog](https://docs.hetzner.com/changelog#2025-12-16-phasing-out-datacenters)).
+**Why:** the `jarvis` repo (the standalone assistant) has its own age key; the box
+runs jarvis's `bin/jarvis-tf` (Terraform) *here*, so the key must be present to
+decrypt `secrets/*.age`. Right now it's a **live-only** working copy at
+`~/.config/age/jarvis.key` (+ Bitwarden) — a devbox rebuild loses it (drift). tipso
+and accounting-sync are already delivered via the `repo-age-keys` role; jarvis just
+needs to join them.
 
-- [ ] Switch `hcloud_primary_ip.devbox` from `datacenter = "hel1-dc2"` to
-  `location = "hel1"` (drop the `primary_ip_datacenter` var). **Verify the plan
-  shows in-place / no-op, NOT replacement** — recreating the primary IP would
-  lose the stable IP. Test carefully (`bin/devbox-tf plan` on the laptop) before
-  apply; if it wants to replace, stop and find the non-destructive path.
+**What to do** (from the **laptop**, needs `secrets.local`):
+- [ ] Encrypt the **jarvis age private key** under the *devbox* key →
+  `ansible/secrets/jarvis-age-key.age` (recipe: `docs/secrets.md` → "Adding a new
+  encrypted secret"). The plaintext is the current `~/.config/age/jarvis.key`.
+- [ ] Add `jarvis` to the existing `repo-age-keys` role (drops it at
+  `~/.config/age/jarvis.key`, mode 0600) — same shape as the tipso/accounting entries.
+- [ ] Add a row to the `docs/secrets.md` inventory table.
 
 ## Wire up ntfy push notifications
 

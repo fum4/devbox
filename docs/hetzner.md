@@ -69,17 +69,17 @@ bin/devbox-tf apply                                  # create (or reconcile) the
 bin/devbox-tf destroy -target=hcloud_server.devbox   # destroy ONLY the server; the IP survives
 ```
 
-The decisions the old UI form asked for are now code (`terraform/devbox/variables.tf`): Helsinki (hel1), Debian 12, CX33, name `devbox`, backups off. Because the primary IP outlives the server, a rebuild keeps the same IPv4 — no more copying IPs into config files ([provisioning.md](provisioning.md) §2 is now a no-op).
+The decisions the old UI form asked for are now code (`terraform/devbox/variables.tf`): Helsinki (hel1), Debian 12, CX43, name `devbox-1`, backups off. Because the primary IP outlives the server, a rebuild keeps the same IPv4 — no more copying IPs into config files ([provisioning.md](provisioning.md) §2 is now a no-op).
 
 Billing stops at the second of server deletion. A detached primary IP costs ~€0.50/mo while no server is attached (free while attached). Snapshots taken beforehand persist (~€0.0119/GB/month) until deleted separately.
 
 ## Recurring costs
 
-The devbox runs on **CX33** (Helsinki):
+The devbox runs on **CX43** (Helsinki):
 
 | | Cost |
 |---|---|
-| CX33 (4 vCPU AMD, 8 GB RAM, 80 GB disk) | €6.49/mo |
+| CX43 (8 vCPU Intel, 16 GB RAM, 160 GB disk) | €11.99/mo |
 | Public IPv4 (included) | — |
 | Public IPv6 (included) | — |
 | Bandwidth (20 TB included) | — |
@@ -98,7 +98,7 @@ Hetzner bills **hourly, prorated**. Deleting a VPS stops billing immediately. So
 
 - DNS (we use Tailscale MagicDNS; no public hostname needed)
 - Load balancers (out of scope for a personal dev box)
-- Volumes / object storage (the VPS's local 80GB is enough)
+- Volumes / object storage (the VPS's local 160 GB is enough)
 - Backups (snapshots on-demand are sufficient for our use case)
 
 ## When to revisit Hetzner
