@@ -23,4 +23,5 @@ fum4/chartekk
 fum4/devbox
 fum4/easyskills
 fum4/jarvis
+fum4/ops
 fum4/tipso
